@@ -11,9 +11,9 @@
     }
   },
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/index" },
-    { "source": "/django-admin/:path*", "destination": "/api/index" },
-    { "source": "/static/:path*", "destination": "/api/index" },
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/django-admin/(.*)", "destination": "/api/index" },
+    { "source": "/static/(.*)", "destination": "/api/index" },
     { "source": "/((?!api/|django-admin/|static/).*)", "destination": "/index.html" }
   ],
   "headers": [
