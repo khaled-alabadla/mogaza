@@ -42,3 +42,11 @@ def name_key(value):
     """Comparison key for short names (e.g. neighborhoods): search-normalized, ignoring a stray hamza
     so that "مخيم الشاطيء" and "مخيم الشاطئ" are treated as the same name."""
     return normalize_for_search(value).replace("ء", "")
+
+
+_DIGITS = str.maketrans({k: v for k, v in _CHAR_MAP.items() if v.isdigit()})
+
+
+def ascii_digits(value):
+    """Arabic-Indic digits → ASCII digits («٠٥٩٩» → «0599»), everything else unchanged."""
+    return clean_text(value).translate(_DIGITS)

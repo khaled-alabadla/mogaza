@@ -14,6 +14,16 @@ class IsAdminRole(BasePermission):
         return is_admin(request.user)
 
 
+class IsEditorRole(BasePermission):
+    """Admins and editors only, for reading too (e.g. complaints, which hold citizens' personal data)."""
+
+    message = "هذه الصفحة متاحة للمحررين ومدير النظام فقط."
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and user.can_edit_locations)
+
+
 class LocationPermission(BasePermission):
     """
     Read: any authenticated user (or anonymous if PUBLIC_SEARCH_ENABLED).

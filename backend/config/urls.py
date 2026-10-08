@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import ChangePasswordView, LoginView, LogoutView, MeView, UserViewSet
 from apps.audit.views import AuditLogViewSet
+from apps.complaints.views import ComplaintViewSet
 from apps.locations.views import LocationViewSet, StreetNameViewSet
 from apps.water.views import NeighborhoodViewSet, WaterZoneViewSet
 from apps.water.table_api import DistributionGroupViewSet
@@ -14,6 +15,7 @@ router.register("streets", StreetNameViewSet, basename="street")
 router.register("neighborhoods", NeighborhoodViewSet, basename="neighborhood")
 router.register("water-zones", WaterZoneViewSet, basename="water-zone")
 router.register("water-table", DistributionGroupViewSet, basename="water-table")
+router.register("complaints", ComplaintViewSet, basename="complaint")
 router.register("users", UserViewSet, basename="user")
 router.register("audit-logs", AuditLogViewSet, basename="auditlog")
 

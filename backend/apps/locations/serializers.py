@@ -1,18 +1,13 @@
-import re
-
 from rest_framework import serializers
 
-from apps.common.validation import required_text
+from apps.common.validation import code_text, required_text
 from apps.water.models import Neighborhood, WaterZone, schedule_text
 from apps.water.serializers import NEIGHBORHOOD_ERRORS, slot_data
 
 from .models import Location, StreetName
 from .text import clean_text
 
-NUMBER_PATTERN = re.compile(r"^[\w\-/. ]*$")
-
-
-def _user_label(user):
+def user_label(user):
     if not user:
         return None
     return user.get_full_name() or user.get_username()
@@ -23,10 +18,10 @@ class TrackedSerializer(serializers.ModelSerializer):
     updated_by_name = serializers.SerializerMethodField()
 
     def get_created_by_name(self, obj):
-        return _user_label(obj.created_by)
+        return user_label(obj.created_by)
 
     def get_updated_by_name(self, obj):
-        return _user_label(obj.updated_by)
+        return user_label(obj.updated_by)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -99,17 +94,11 @@ class LocationSerializer(TrackedSerializer):
     def validate_description(self, value):
         return clean_text(value)
 
-    def _validate_number(self, value, label):
-        value = clean_text(value)
-        if value and not NUMBER_PATTERN.match(value):
-            raise serializers.ValidationError(f"{label} يحتوي على رموز غير مسموحة.")
-        return value
-
     def validate_building_number(self, value):
-        return self._validate_number(value, "رقم المبنى")
+        return code_text(value, "رقم المبنى")
 
     def validate_street_number(self, value):
-        return self._validate_number(value, "رقم الشارع")
+        return code_text(value, "رقم الشارع")
 
 
 class StreetNameSerializer(TrackedSerializer):

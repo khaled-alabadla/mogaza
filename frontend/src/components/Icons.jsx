@@ -132,3 +132,19 @@ export const ChevronDownIcon = (p) => (
     <path d="m6 9 6 6 6-6" />
   </Svg>
 )
+export const InboxIcon = (p) => (
+  <Svg {...p}>
+    <path d="M4 13V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7" />
+    <path d="M4 13h4l1.5 3h5l1.5-3h4v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5Z" />
+  </Svg>
+)
+export const CheckIcon = (p) => (
+  <Svg {...p}>
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </Svg>
+)
+export const DownloadIcon = (p) => (
+  <Svg {...p}>
+    <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />
+  </Svg>
+)

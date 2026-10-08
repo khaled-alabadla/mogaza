@@ -17,11 +17,18 @@ const { default: UserMenu } = await import('../components/UserMenu')
 
 describe('visibleLinks', () => {
   const paths = (state) => visibleLinks(state).map((l) => l.to)
-  it('follows the search-access and admin rules', () => {
+  it('follows the search-access, editor and admin rules', () => {
     expect(paths({ isAuthenticated: false, publicSearch: false })).toEqual([])
     expect(paths({ isAuthenticated: false, publicSearch: true })).toEqual(['/', '/water'])
     expect(paths({ isAuthenticated: true })).toEqual(['/', '/water'])
-    expect(paths({ isAuthenticated: true, isAdmin: true })).toEqual(['/', '/water', '/users', '/audit-logs'])
+    expect(paths({ isAuthenticated: true, canEdit: true })).toEqual(['/', '/water', '/complaints'])
+    expect(paths({ isAuthenticated: true, isAdmin: true, canEdit: true })).toEqual([
+      '/',
+      '/water',
+      '/complaints',
+      '/users',
+      '/audit-logs',
+    ])
   })
 })
 

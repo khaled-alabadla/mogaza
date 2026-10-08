@@ -11,12 +11,18 @@ export function RequireSearchAccess({ children }) {
   return children
 }
 
-/** Admin-only pages. The server enforces the same rule on every API call. */
-export function RequireAdmin({ children }) {
-  const { loading, isAuthenticated, isAdmin } = useAuth()
+/** Signed-in users for whom `allowed(auth)` is true; others go to the search page. The API enforces the same. */
+function RequireRole({ allowed, children }) {
+  const auth = useAuth()
   const location = useLocation()
-  if (loading) return <LoadingState />
-  if (!isAuthenticated) return <Navigate to="/login" replace state={{ from: location }} />
-  if (!isAdmin) return <Navigate to="/" replace />
+  if (auth.loading) return <LoadingState />
+  if (!auth.isAuthenticated) return <Navigate to="/login" replace state={{ from: location }} />
+  if (!allowed(auth)) return <Navigate to="/" replace />
   return children
 }
+
+/** Admin-only pages (users, audit log). */
+export const RequireAdmin = ({ children }) => <RequireRole allowed={(a) => a.isAdmin}>{children}</RequireRole>
+
+/** Admins and editors (temporary complaints: citizens' personal data). */
+export const RequireEditor = ({ children }) => <RequireRole allowed={(a) => a.canEdit}>{children}</RequireRole>

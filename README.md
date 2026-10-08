@@ -106,6 +106,23 @@ Every permission is enforced **on the server** (`apps/accounts/permissions.py`).
 | GET / POST / PATCH / DELETE | `/api/users/` · `/api/users/{id}/` (PATCH `is_active` to deactivate; DELETE removes the user permanently, their audit history is kept) | admin |
 | GET | `/api/audit-logs/?action=&entity_type=&entity_id=&user=` | admin |
 
+### الشكاوى المؤقتة (temporary complaints)
+
+Used while the municipality's main complaints system is down: staff record complaints/inquiries here, then mark
+them «تم الرفع» after entering them into the main system. **Admins and editors only** (read and write): the records
+hold citizens' ID and phone numbers. Every change is audit-logged (`complaint`).
+
+Fields: `kind` (`complaint` = شكوى / `inquiry` = استفسار), `national_id` (9 digits), `name`, `phone`
+(local number, e.g. `0599123456`; `+970`/`+972` and Arabic-Indic digits are normalized), `point` (النقطة),
+`building_number` / `street_number` (letters allowed, e.g. `5A`), `category` (نوع الشكوى), `address`.
+
+| Method | URL | Who |
+|--------|-----|-----|
+| GET / POST | `/api/complaints/?upload=pending\|uploaded&kind=complaint\|inquiry&search=` (list adds `pending_count`) | admin, editor |
+| GET / PUT / PATCH / DELETE | `/api/complaints/{id}/` (DELETE = soft delete; admins can `POST …/restore/`) | admin, editor |
+| POST | `/api/complaints/mark-uploaded/` `{"ids": [...], "uploaded": true\|false}` | admin, editor |
+| GET | `/api/complaints/export/` (same filters → CSV, UTF-8 with BOM for Excel) | admin, editor |
+
 ### جدول المياه (water schedule)
 
 **What the website shows (page `/water`) is the official sheet «جدول توزيع المياه حسب توجيهات المواطنين»:**

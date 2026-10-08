@@ -6,7 +6,7 @@ import FormAlert from './FormAlert'
 
 /**
  * Generic add/edit form. `fields` describes the inputs:
- *   { name, label, required, placeholder, maxLength, numeric, multiline, half }
+ *   { name, label, required, placeholder, maxLength, numeric, inputMode, multiline, half }
  * a select: { name, label, type: 'select', options: [{ value, label }], emptyLabel }
  *
  * A select without options (e.g. its list failed to load) is neither shown nor submitted,
@@ -78,7 +78,7 @@ export default function RecordForm({ fields: allFields, initial, submitLabel, on
               ) : (
                 <input
                   type="text"
-                  inputMode={f.numeric ? 'text' : undefined}
+                  inputMode={f.inputMode || (f.numeric ? 'text' : undefined)}
                   dir={f.numeric ? 'ltr' : undefined}
                   placeholder={f.placeholder}
                   maxLength={f.maxLength}

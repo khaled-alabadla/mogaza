@@ -69,4 +69,10 @@ export const usersApi = crud('users')
 export const neighborhoodsApi = crud('neighborhoods')
 /** Official water distribution table: `list` → { today, today_display, results: [...] } (not paginated). */
 export const waterTableApi = crud('water-table')
+/** Temporary complaints («الشكاوى المؤقتة»): list adds `pending_count`; CSV export uses the same filters. */
+export const complaintsApi = {
+  ...restorable('complaints'),
+  markUploaded: (ids, uploaded = true) => api.post('/complaints/mark-uploaded/', { ids, uploaded }).then((r) => r.data),
+  exportUrl: (params) => `/api/complaints/export/?${new URLSearchParams(params)}`,
+}
 export const auditApi = { list: crud('audit-logs').list }
