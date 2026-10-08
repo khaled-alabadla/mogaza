@@ -1,0 +1,26 @@
+# Secrets
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+backend/staticfiles/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Legacy data source (used once for migration, never part of the app)
+*.xlsx
+*.xls
+
+# Local database / tooling
+.pgdata/
+*.log
+.DS_Store
+.dev-credentials
+
+# Vercel CLI project link
+.vercel/

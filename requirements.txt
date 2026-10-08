@@ -1,0 +1,9 @@
+# Python dependencies of the Vercel function (api/index.py). Keep in sync with backend/requirements.txt,
+# minus gunicorn (Vercel runs the WSGI app itself) and openpyxl (only the one-time Excel import needs it).
+Django>=5.2,<6.1
+djangorestframework>=3.15,<4
+django-cors-headers>=4.4,<5
+psycopg2-binary>=2.9.9,<3
+python-dotenv>=1.0,<2
+dj-database-url>=2.2,<4
+whitenoise>=6.7,<7  # used on Vercel only

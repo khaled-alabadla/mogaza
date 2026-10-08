@@ -1,0 +1,10 @@
+Django>=5.2,<6.1
+djangorestframework>=3.15,<4
+django-cors-headers>=4.4,<5
+psycopg2-binary>=2.9.9,<3
+python-dotenv>=1.0,<2
+dj-database-url>=2.2,<4
+whitenoise>=6.7,<7  # used on Vercel only
+gunicorn>=22.0; sys_platform != "win32"
+# Only needed by the one-time `import_locations` command, never by the running app:
+openpyxl>=3.1,<4

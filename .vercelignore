@@ -1,0 +1,14 @@
+# Never upload local secrets, databases or build/tool output with `vercel deploy`.
+.env
+*.env.local
+.dev-credentials
+.pgdata/
+.claude/
+**/__pycache__/
+backend/.venv/
+backend/staticfiles/
+frontend/node_modules/
+frontend/dist/
+*.xlsx
+*.xls
+*.log

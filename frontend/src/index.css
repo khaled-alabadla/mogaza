@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+/* Palette derived from the Gaza Municipality logo, used as restrained accents. */
+@theme {
+  --font-sans: "IBM Plex Sans Arabic", system-ui, "Segoe UI", Tahoma, sans-serif;
+  --font-ruqaa: "Aref Ruqaa", "IBM Plex Sans Arabic", serif;
+
+  --color-brand-50: #eef7f1;
+  --color-brand-100: #d6ecde;
+  --color-brand-500: #0f8a47;
+  --color-brand-600: #0a6b38;
+  --color-brand-700: #085a2f;
+  --color-brand-800: #06462a;
+
+  --color-danger-50: #fdeeee;
+  --color-danger-100: #f9d6d7;
+  --color-danger-600: #c62a31;
+  --color-danger-700: #a82229;
+
+  --color-gold-100: #fdf3cf;
+  --color-gold-400: #f5c518;
+  --color-gold-700: #8a6a00;
+
+  --color-ink: #26282b;
+  --color-muted: #62676e;
+  --color-line: #e3e6e9;
+  --color-canvas: #f6f7f6;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Always reserve the scrollbar's space so short and long pages have the same width:
+       otherwise the centered navbar jumps sideways when navigating between them. */
+    scrollbar-gutter: stable;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    min-height: 100vh;
+  }
+  /* Keep numbers (building / street) readable inside RTL text */
+  .num {
+    direction: ltr;
+    unicode-bidi: isolate;
+    font-variant-numeric: tabular-nums;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+}
+
+/* Touch screens: at least 44×44px for anything tappable (mouse layouts keep their size). */
+@utility tap {
+  @media (pointer: coarse) {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+}
+
+@layer components {
+  /* Every button has a 1px border (transparent unless coloured) so primary and secondary
+     buttons placed side by side are exactly the same height. */
+  .btn {
+    @apply tap inline-flex items-center justify-center gap-2 rounded-lg border border-transparent px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  /* use together with .btn, e.g. className="btn btn-primary" */
+  .btn-primary {
+    @apply bg-brand-600 text-white hover:bg-brand-700;
+  }
+  .btn-secondary {
+    @apply border-line bg-white text-ink hover:border-gray-300 hover:bg-gray-50;
+  }
+  .btn-danger {
+    @apply bg-danger-600 text-white hover:bg-danger-700;
+  }
+  .btn-ghost-danger {
+    @apply border-danger-100 bg-white text-danger-700 hover:border-danger-600/30 hover:bg-danger-50;
+  }
+  /* Square icon-only button (dialog / toast close) */
+  .icon-btn {
+    @apply tap inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-canvas hover:text-ink disabled:pointer-events-none disabled:opacity-40;
+  }
+  /* Small status pill (roles, audit actions, neighbourhood, «اليوم»). Colours are added per use. */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap;
+  }
+  .input {
+    @apply w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-base text-ink placeholder:text-gray-500 hover:border-gray-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-100 focus:outline-none disabled:cursor-not-allowed disabled:bg-canvas disabled:text-muted;
+  }
+  /* selects render 1px taller than text inputs: match them when they sit in the same row */
+  select.input {
+    @apply h-[2.875rem];
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink;
+  }
+  .card {
+    @apply rounded-xl border border-line bg-white;
+  }
+  .field-error {
+    @apply mt-1 text-sm text-danger-700;
+  }
+  .login-input {
+    @apply w-full rounded-xl border border-line bg-canvas py-3.5 text-base text-ink transition-colors placeholder:text-gray-500 hover:border-gray-300 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100 focus:outline-none;
+  }
+}
+
+/* Login page: harlequin diamonds echoing the municipality shield, very faint —
+   white on the identity panel, green (and fading out) on the light side. */
+.harlequin,
+.harlequin-soft {
+  position: absolute;
+  inset: -50%;
+  background: repeating-conic-gradient(var(--diamond) 0 25%, transparent 0 50%) 0 0 / 56px 56px;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+.harlequin {
+  --diamond: rgb(255 255 255 / 0.05);
+}
+.harlequin-soft {
+  --diamond: rgb(10 107 56 / 0.035);
+  mask-image: radial-gradient(circle at center, black 20%, transparent 65%);
+}
+
+.quote-reveal,
+.quote-reveal-late {
+  animation: quote-reveal 1.4s ease-out both;
+}
+.quote-reveal-late {
+  animation-delay: 0.5s;
+}
+@keyframes quote-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .quote-reveal,
+  .quote-reveal-late {
+    animation: none;
+  }
+}
