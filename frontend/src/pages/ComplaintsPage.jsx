@@ -50,13 +50,13 @@ function ComplaintCard({ complaint: c, selected, onSelect, onToggleUploaded, onE
             className="mt-1 h-4 w-4 accent-brand-600"
             checked={selected}
             onChange={(e) => onSelect(c.id, e.target.checked)}
-            aria-label={`تحديد ${c.kind_display} ${c.name}`}
+            aria-label={`تحديد ${c.kind_display} ${c.name || c.category || c.id}`}
           />
         </label>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`badge ${KIND_TONES[c.kind]}`}>{c.kind_display}</span>
-            <h3 className="font-bold text-ink">{c.category}</h3>
+            <h3 className="font-bold text-ink">{c.category || `${c.kind_display} بدون تصنيف`}</h3>
             <span className={`badge ${STATUS_TONES[c.status]}`}>{c.status_display}</span>
           </div>
           <p className="mt-1 text-xs text-muted">
@@ -71,9 +71,11 @@ function ComplaintCard({ complaint: c, selected, onSelect, onToggleUploaded, onE
               {c.national_id}
             </Detail>
             <Detail label="رقم الجوال" ltr>
-              <a href={`tel:${c.phone}`} className="hover:text-brand-700 hover:underline">
-                {c.phone}
-              </a>
+              {c.phone && (
+                <a href={`tel:${c.phone}`} className="hover:text-brand-700 hover:underline">
+                  {c.phone}
+                </a>
+              )}
             </Detail>
             <Detail label="النقطة">{c.point}</Detail>
             <Detail label="رقم المبنى" ltr>
@@ -308,7 +310,11 @@ export default function ComplaintsPage() {
       <ConfirmDialog
         open={Boolean(deletion.target)}
         message="هل أنت متأكد من حذف هذه الشكوى؟"
-        details={deletion.target ? `${deletion.target.kind_display}: ${deletion.target.name} — ${deletion.target.category}` : ''}
+        details={
+          deletion.target
+            ? [deletion.target.kind_display, deletion.target.name, deletion.target.category].filter(Boolean).join(' — ')
+            : ''
+        }
         busy={deletion.busy}
         onConfirm={deletion.confirm}
         onCancel={deletion.cancel}

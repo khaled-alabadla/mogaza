@@ -41,14 +41,32 @@ class ComplaintTests(APITestCase):
         data = self.create(kind="inquiry", point="", building_number="", street_number="", address="")
         self.assertEqual(data["kind_display"], "استفسار")
 
-    def test_validation_messages(self):
+    def test_all_data_fields_are_optional(self):
+        self.client.force_authenticate(self.editor)
+        res = self.client.post(URL, {"phone": "0599123456"}, format="json")  # only a phone number
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual((res.data["kind"], res.data["name"], res.data["national_id"]), ("complaint", "", ""))
+        res = self.client.post(URL, {"kind": "inquiry", "category": "استفسار عن موعد المياه"}, format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+
+    def test_empty_record_is_rejected(self):
+        self.client.force_authenticate(self.editor)
+        for payload in ({}, {"kind": "complaint"}, {"name": "   ", "national_id": "", "address": " "}):
+            res = self.client.post(URL, payload, format="json")
+            self.assertEqual(res.status_code, 400, payload)
+            self.assertEqual(str(res.data["non_field_errors"][0]), "أدخل بيانات الشكوى: حقل واحد على الأقل.")
+        # editing a record cannot empty it either
+        pk = self.create()["id"]
+        cleared = {field: "" for field in VALID if field != "kind"}
+        self.assertEqual(self.client.patch(f"{URL}{pk}/", cleared, format="json").status_code, 400)
+        self.assertEqual(self.client.patch(f"{URL}{pk}/", {"name": ""}, format="json").status_code, 200)
+
+    def test_filled_fields_are_still_validated(self):
         self.client.force_authenticate(self.editor)
         cases = {
             "national_id": ("12345", "رقم الهوية يجب أن يتكون من 9 أرقام."),
             "phone": ("12345", "رقم الجوال غير صحيح (مثال: 0599123456)."),
             "kind": ("other", "اختر نوع الطلب: شكوى أو استفسار."),
-            "name": ("   ", "الاسم مطلوب."),
-            "category": ("", "نوع الشكوى مطلوب."),
             "building_number": ("5A<script>", "رقم المبنى يحتوي على رموز غير مسموحة."),
         }
         for field, (value, message) in cases.items():

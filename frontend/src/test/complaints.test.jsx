@@ -75,14 +75,23 @@ describe('ComplaintsPage', () => {
     )
   })
 
-  it('requires the mandatory fields before calling the API', async () => {
+  it('accepts a complaint with only some fields, and shows the server error for an empty one', async () => {
+    complaintsApi.create
+      .mockRejectedValueOnce({ response: { status: 400, data: { non_field_errors: ['أدخل بيانات الشكوى: حقل واحد على الأقل.'] } } })
+      .mockResolvedValueOnce({})
     render(<ComplaintsPage />)
     await screen.findByText('انقطاع مياه')
     await userEvent.click(screen.getAllByRole('button', { name: /تسجيل شكوى/ })[0])
-    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'تسجيل الشكوى' }))
-    expect(screen.getByText('رقم الهوية مطلوب.')).toBeInTheDocument()
-    expect(screen.getByText('رقم الجوال مطلوب.')).toBeInTheDocument()
-    expect(complaintsApi.create).not.toHaveBeenCalled()
+    const dialog = screen.getByRole('dialog')
+    // no field is marked as required except the kind
+    expect(within(dialog).getByLabelText(/رقم الهوية/)).not.toHaveAccessibleName(/\*/)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'تسجيل الشكوى' }))
+    expect(await within(dialog).findByText('أدخل بيانات الشكوى: حقل واحد على الأقل.')).toBeInTheDocument()
+    await userEvent.type(within(dialog).getByLabelText(/رقم الجوال/), '0599123456')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'تسجيل الشكوى' }))
+    expect(complaintsApi.create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: 'complaint', phone: '0599123456', national_id: '', name: '' }),
+    )
   })
 
   it('marks selected complaints as uploaded', async () => {

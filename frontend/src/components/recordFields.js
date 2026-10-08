@@ -25,12 +25,13 @@ export const COMPLAINT_KINDS = [
   { value: 'inquiry', label: 'استفسار' },
 ]
 
+/** Everything but the kind is optional (the server rejects a record with no data at all). */
 export const COMPLAINT_FIELDS = [
   { name: 'kind', label: 'نوع الطلب', type: 'select', options: COMPLAINT_KINDS, required: true, emptyLabel: '— اختر —', half: true },
-  { name: 'category', label: 'نوع الشكوى', required: true, maxLength: 150, half: true, placeholder: 'مثال: انقطاع مياه' },
-  { name: 'national_id', label: 'رقم الهوية', required: true, maxLength: 12, numeric: true, inputMode: 'numeric', half: true, placeholder: '401234567' },
-  { name: 'name', label: 'الاسم', required: true, maxLength: 150, half: true, placeholder: 'الاسم الرباعي' },
-  { name: 'phone', label: 'رقم الجوال', required: true, maxLength: 16, numeric: true, inputMode: 'tel', half: true, placeholder: '0599123456' },
+  { name: 'category', label: 'نوع الشكوى', maxLength: 150, half: true, placeholder: 'مثال: انقطاع مياه' },
+  { name: 'national_id', label: 'رقم الهوية', maxLength: 12, numeric: true, inputMode: 'numeric', half: true, placeholder: '401234567' },
+  { name: 'name', label: 'الاسم', maxLength: 150, half: true, placeholder: 'الاسم الرباعي' },
+  { name: 'phone', label: 'رقم الجوال', maxLength: 16, numeric: true, inputMode: 'tel', half: true, placeholder: '0599123456' },
   { name: 'point', label: 'النقطة', maxLength: 150, half: true },
   { name: 'building_number', label: 'رقم المبنى', maxLength: 20, numeric: true, half: true, placeholder: '5A' },
   { name: 'street_number', label: 'رقم الشارع', maxLength: 20, numeric: true, half: true, placeholder: '1050' },

@@ -10,6 +10,7 @@ class Complaint(TrackedModel):
     """
     A complaint or inquiry recorded here while the municipality's main complaints system is down.
     It stays «بانتظار الرفع» until staff enter it into the main system and mark it «تم الرفع».
+    Every data field is optional (whatever the caller could give); only the kind is always set.
     """
 
     class Kind(models.TextChoices):
@@ -21,13 +22,13 @@ class Complaint(TrackedModel):
         UPLOADED = "uploaded", "تم الرفع"
 
     kind = models.CharField("نوع الطلب", max_length=10, choices=Kind.choices, default=Kind.COMPLAINT)
-    national_id = models.CharField("رقم الهوية", max_length=9)
-    name = models.CharField("الاسم", max_length=150)
-    phone = models.CharField("رقم الجوال", max_length=10)
+    national_id = models.CharField("رقم الهوية", max_length=9, blank=True)
+    name = models.CharField("الاسم", max_length=150, blank=True)
+    phone = models.CharField("رقم الجوال", max_length=10, blank=True)
     point = models.CharField("النقطة", max_length=150, blank=True)
     building_number = models.CharField("رقم المبنى", max_length=20, blank=True)
     street_number = models.CharField("رقم الشارع", max_length=20, blank=True)
-    category = models.CharField("نوع الشكوى", max_length=150)
+    category = models.CharField("نوع الشكوى", max_length=150, blank=True)
     address = models.CharField("العنوان", max_length=300, blank=True)
 
     status = models.CharField("الحالة", max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
@@ -42,7 +43,7 @@ class Complaint(TrackedModel):
         indexes = [GinIndex(fields=["search_text"], name="complaint_search_trgm", opclasses=["gin_trgm_ops"])]
 
     def __str__(self):
-        return f"{self.get_kind_display()} — {self.name}"
+        return f"{self.get_kind_display()} — {self.name or self.category or self.pk}"
 
     def build_search_text(self):
         return normalize_for_search(" ".join([
