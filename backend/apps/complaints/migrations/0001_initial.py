@@ -6,6 +6,8 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+
+
 class Migration(migrations.Migration):
 
     initial = True
