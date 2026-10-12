@@ -5,7 +5,6 @@ from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from rest_framework import mixins, status, viewsets
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
@@ -87,9 +86,6 @@ class ChangePasswordView(APIView):
         return Response({"detail": "تم تغيير كلمة المرور بنجاح."})
 
 
-SUPERUSER_PROTECTED = "لا يمكن تعديل حساب المدير الأعلى أو حذفه إلا من قِبله."
-
-
 class UserViewSet(AuditedViewSetMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,
                   mixins.UpdateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
     """Admin-only user management: create, edit (role, active flag, password reset) and delete."""
@@ -100,6 +96,10 @@ class UserViewSet(AuditedViewSetMixin, mixins.ListModelMixin, mixins.RetrieveMod
 
     def get_queryset(self):
         qs = User.objects.all().order_by("username")
+        # The superuser is the system developer's account: hidden from (and untouchable by) everyone else,
+        # who get a plain 404 for it as if it did not exist.
+        if not self.request.user.is_superuser:
+            qs = qs.exclude(is_superuser=True)
         search = text_param(self.request, "search")
         if search:
             qs = qs.filter(Q(username__icontains=search) | Q(first_name__icontains=search) |
@@ -109,13 +109,7 @@ class UserViewSet(AuditedViewSetMixin, mixins.ListModelMixin, mixins.RetrieveMod
     def snapshot(self, instance):
         return user_snapshot(instance)
 
-    def guard_superuser(self, target):
-        """Only a superuser may edit, deactivate, reset the password of, or delete a superuser."""
-        if target.is_superuser and not self.request.user.is_superuser:
-            raise PermissionDenied(SUPERUSER_PROTECTED)
-
     def perform_update(self, serializer):
-        self.guard_superuser(serializer.instance)
         before = user_snapshot(serializer.instance)
         password_changed = bool(serializer.validated_data.get("password"))
         user = serializer.save()
@@ -131,6 +125,5 @@ class UserViewSet(AuditedViewSetMixin, mixins.ListModelMixin, mixins.RetrieveMod
         user = self.get_object()
         if user.pk == request.user.pk:
             return Response({"detail": "لا يمكنك حذف حسابك الخاص."}, status=status.HTTP_400_BAD_REQUEST)
-        self.guard_superuser(user)
         self.perform_destroy(user)
         return Response(status=status.HTTP_204_NO_CONTENT)

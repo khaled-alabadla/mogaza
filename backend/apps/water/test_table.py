@@ -74,3 +74,42 @@ class WaterTableTests(APITestCase):
             self.assertEqual(self.client.get(URL).status_code, 403)
         with override_settings(PUBLIC_SEARCH_ENABLED=True):
             self.assertEqual(self.client.get(URL).status_code, 200)
+
+
+class WaterSourceTests(APITestCase):
+    """Each area is fed by «خط ماكروت», «الآبار المحلية», or is not classified yet."""
+
+    def setUp(self):
+        self.editor = User.objects.create_user("e2", password="S3cure-Pass-2026", role=User.Role.EDITOR)
+        self.client.force_authenticate(self.editor)
+
+    def test_areas_keep_their_source(self):
+        res = self.client.post(URL, {"days": [0, 3], "areas": [
+            {"name": "النديم", "source": "mekorot"},
+            {"name": "عين جالوت", "source": "wells"},
+            "نادي الزيتون",                                    # plain string = unclassified
+            {"name": "النديم", "source": "wells"},              # duplicate name: first one wins
+        ]}, format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual([(a["name"], a["source"], a["source_display"]) for a in res.data["area_list"]], [
+            ("النديم", "mekorot", "خط ماكروت"),
+            ("عين جالوت", "wells", "الآبار المحلية"),
+            ("نادي الزيتون", "", "غير مصنّف"),
+        ])
+        gid = res.data["id"]
+        res = self.client.patch(f"{URL}{gid}/", {"areas": [{"name": "نادي الزيتون", "source": "mekorot"}]},
+                                format="json")
+        self.assertEqual([(a["name"], a["source"]) for a in res.data["area_list"]], [("نادي الزيتون", "mekorot")])
+        update = AuditLog.objects.filter(entity_type="watertable", entity_id=str(gid), action="UPDATE").get()
+        self.assertEqual(update.after_data["areas"], [{"name": "نادي الزيتون", "source": "mekorot"}])
+
+    def test_existing_seeded_areas_are_unclassified(self):
+        rows = self.client.get(URL).data["results"]
+        self.assertTrue(rows)
+        self.assertTrue(all(a["source"] == "" for row in rows for a in row["area_list"]))
+
+    def test_bad_source_or_shape_is_rejected(self):
+        for areas in ([{"name": "x", "source": "river"}], [42], [{"name": "ن" * 201}], [{"name": "  "}]):
+            res = self.client.post(URL, {"days": [1], "areas": areas}, format="json")
+            self.assertEqual(res.status_code, 400, areas)
+            self.assertIn("areas", res.data)

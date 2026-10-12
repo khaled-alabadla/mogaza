@@ -6,47 +6,51 @@ from apps.common.validation import code_text
 from apps.locations.serializers import TrackedSerializer, user_label
 from apps.locations.text import ascii_digits, clean_text
 
-from .models import Complaint
+from .models import SEARCH_FIELDS, Complaint
 
 _NATIONAL_ID = re.compile(r"^\d{9}$")
 # Local mobile / landline: 0599123456 or 082123456; +970 / 00970 / +972 prefixes become 0.
 _PHONE = re.compile(r"^0\d{8,9}$")
 _PHONE_PREFIX = re.compile(r"^(?:\+|00)97[02]")
 
+# Plain one-line text fields: (field, Arabic label for messages). Whitespace is collapsed.
+TEXT_FIELDS = {
+    "name": "الاسم", "category": "النوع", "area": "الحي / المنطقة", "point": "رقم النقطة", "address": "العنوان",
+}
+# Number-like codes: letters and digits allowed («5A»), checked by code_text.
+CODE_FIELDS = {"building_number": "رقم المبنى", "street_number": "رقم الشارع", "subscription": "الاشتراك"}
+DETAILS_LIMIT = 3000
+EMPTY_RECORD = "أدخل بيانات الشكوى أو الاستفسار: حقل واحد على الأقل."
 
-DATA_FIELDS = ("national_id", "name", "phone", "point", "building_number", "street_number", "category", "address")
 
-
-def _length_error(label, limit):
-    return {"max_length": f"{label} طويل جداً (الحد الأقصى {limit} حرفاً)."}
+def _optional(label, limit):
+    return {"required": False, "allow_blank": True,
+            "error_messages": {"max_length": f"{label} طويل جداً (الحد الأقصى {limit} حرفاً)."}}
 
 
 class ComplaintSerializer(TrackedSerializer):
     kind_display = serializers.CharField(source="get_kind_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    channel_display = serializers.CharField(source="get_channel_display", read_only=True)
     uploaded_by_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Complaint
-        fields = ["id", "kind", "kind_display", "national_id", "name", "phone", "point", "building_number",
-                  "street_number", "category", "address", "status", "status_display", "uploaded_at",
-                  "uploaded_by_name", "created_at", "updated_at", "created_by_name", "updated_by_name"]
+        fields = ["id", "kind", "kind_display", "hide_identity", *SEARCH_FIELDS, "channel_display", "status",
+                  "status_display",
+                  "uploaded_at", "uploaded_by_name", "created_at", "updated_at", "created_by_name", "updated_by_name"]
         read_only_fields = ["id", "status", "uploaded_at", "created_at", "updated_at"]
         extra_kwargs = {
             "kind": {"error_messages": {"invalid_choice": "اختر نوع الطلب: شكوى أو استفسار."}},
-            # every data field is optional; national_id / phone length and format are checked after
-            # Arabic digits and spaces are normalized (validate_* below), so no raw max_length here
+            "channel": {"required": False, "allow_blank": True,
+                        "error_messages": {"invalid_choice": "اختر المصدر: اتصال هاتفي أو فيسبوك أو واتساب."}},
+            # every data field is optional; national_id / phone are checked after Arabic digits and spaces
+            # are normalized (validate_* below), so no raw max_length on them
             "national_id": {"required": False, "allow_blank": True, "max_length": None},
             "phone": {"required": False, "allow_blank": True, "max_length": None},
-            "name": {"required": False, "allow_blank": True, "error_messages": _length_error("الاسم", 150)},
-            "category": {"required": False, "allow_blank": True,
-                         "error_messages": _length_error("نوع الشكوى", 150)},
-            "point": {"required": False, "allow_blank": True, "error_messages": _length_error("النقطة", 150)},
-            "building_number": {"required": False, "allow_blank": True,
-                                "error_messages": _length_error("رقم المبنى", 20)},
-            "street_number": {"required": False, "allow_blank": True,
-                              "error_messages": _length_error("رقم الشارع", 20)},
-            "address": {"required": False, "allow_blank": True, "error_messages": _length_error("العنوان", 300)},
+            "details": {**_optional("النص", DETAILS_LIMIT), "max_length": DETAILS_LIMIT},
+            **{field: _optional(label, Complaint._meta.get_field(field).max_length)
+               for field, label in {**TEXT_FIELDS, **CODE_FIELDS}.items()},
         }
 
     def get_uploaded_by_name(self, obj):
@@ -65,30 +69,29 @@ class ComplaintSerializer(TrackedSerializer):
             raise serializers.ValidationError("رقم الجوال غير صحيح (مثال: 0599123456).")
         return value
 
-    def validate_name(self, value):
-        return clean_text(value)
-
-    def validate_category(self, value):
-        return clean_text(value)
-
-    def validate_point(self, value):
-        return clean_text(value)
-
-    def validate_address(self, value):
-        return clean_text(value)
-
-    def validate_building_number(self, value):
-        return code_text(value, "رقم المبنى")
-
-    def validate_street_number(self, value):
-        return code_text(value, "رقم الشارع")
+    def validate_details(self, value):
+        # keep the line breaks of a long text, but trim each line and drop blank edges
+        return "\n".join(clean_text(line) for line in str(value).splitlines()).strip()
 
     def validate(self, attrs):
-        # All fields are optional, but a record with no data at all is useless.
-        merged = {field: getattr(self.instance, field, "") for field in DATA_FIELDS} if self.instance else {}
-        merged.update({field: attrs[field] for field in DATA_FIELDS if field in attrs})
-        if not any(merged.get(field) for field in DATA_FIELDS):
-            raise serializers.ValidationError("أدخل بيانات الشكوى: حقل واحد على الأقل.")
+        errors = {}
+        for field in TEXT_FIELDS:
+            if field in attrs:
+                attrs[field] = clean_text(attrs[field])
+        for field, label in CODE_FIELDS.items():
+            if field in attrs:
+                try:
+                    attrs[field] = code_text(attrs[field], label)
+                except serializers.ValidationError as exc:
+                    errors[field] = exc.detail
+        if errors:
+            raise serializers.ValidationError(errors)
+        # All fields are optional, but a record with no data at all is useless
+        # (the «إخفاء البيانات» flag alone doesn't count as data).
+        merged = {f: getattr(self.instance, f) for f in SEARCH_FIELDS} if self.instance else {}
+        merged.update({f: attrs[f] for f in SEARCH_FIELDS if f in attrs})
+        if not any(merged.get(f) for f in SEARCH_FIELDS):
+            raise serializers.ValidationError(EMPTY_RECORD)
         return attrs
 
 

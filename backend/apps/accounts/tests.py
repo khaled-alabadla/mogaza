@@ -245,30 +245,33 @@ class AuditLogApiTests(APITestCase):
 
 
 class SuperuserProtectionTests(APITestCase):
-    """Only a superuser may change, deactivate, reset the password of, or delete a superuser."""
+    """The superuser is the developer's account: invisible and untouchable for every other admin."""
 
     def setUp(self):
         self.root = User.objects.create_superuser("root", "root@example.com", PASSWORD)
         self.admin = User.objects.create_user("admin1", password=PASSWORD, role=User.Role.ADMIN)
 
-    def test_regular_admin_cannot_touch_a_superuser(self):
+    def test_superuser_is_hidden_from_other_admins(self):
         self.client.force_authenticate(self.admin)
+        listed = [u["username"] for u in self.client.get("/api/users/").data["results"]]
+        self.assertEqual(listed, ["admin1"])
+        self.assertEqual(self.client.get("/api/users/", {"search": "root"}).data["count"], 0)
         url = f"/api/users/{self.root.pk}/"
+        self.assertEqual(self.client.get(url).status_code, 404)
         for payload in ({"password": "Another-Pass-2026"}, {"is_active": False}, {"role": "viewer"},
                         {"first_name": "x"}):
-            res = self.client.patch(url, payload)
-            self.assertEqual(res.status_code, 403, payload)
-            self.assertEqual(res.data["detail"], "لا يمكن تعديل حساب المدير الأعلى أو حذفه إلا من قِبله.")
-        self.assertEqual(self.client.delete(url).status_code, 403)
+            self.assertEqual(self.client.patch(url, payload).status_code, 404, payload)
+        self.assertEqual(self.client.delete(url).status_code, 404)
         self.root.refresh_from_db()
         self.assertTrue(self.root.check_password(PASSWORD))
         self.assertTrue(self.root.is_active)
         self.assertEqual(self.root.first_name, "")
         self.assertFalse(AuditLog.objects.filter(entity_type="user", entity_id=str(self.root.pk)).exists())
-        # reading the list is still fine and flags the protected account
-        listed = {u["username"]: u for u in self.client.get("/api/users/").data["results"]}
-        self.assertTrue(listed["root"]["is_superuser"])
-        self.assertFalse(listed["admin1"]["is_superuser"])
+
+    def test_superuser_sees_everyone_including_itself(self):
+        self.client.force_authenticate(self.root)
+        listed = {u["username"]: u["is_superuser"] for u in self.client.get("/api/users/").data["results"]}
+        self.assertEqual(listed, {"admin1": False, "root": True})
 
     def test_superuser_can_manage_admins_and_itself(self):
         self.client.force_authenticate(self.root)

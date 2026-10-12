@@ -54,7 +54,7 @@ class ComplaintTests(APITestCase):
         for payload in ({}, {"kind": "complaint"}, {"name": "   ", "national_id": "", "address": " "}):
             res = self.client.post(URL, payload, format="json")
             self.assertEqual(res.status_code, 400, payload)
-            self.assertEqual(str(res.data["non_field_errors"][0]), "أدخل بيانات الشكوى: حقل واحد على الأقل.")
+            self.assertEqual(str(res.data["non_field_errors"][0]), "أدخل بيانات الشكوى أو الاستفسار: حقل واحد على الأقل.")
         # editing a record cannot empty it either
         pk = self.create()["id"]
         cleared = {field: "" for field in VALID if field != "kind"}
@@ -84,6 +84,9 @@ class ComplaintTests(APITestCase):
         self.assertEqual(res.data["pending_count"], 1)
         self.assertEqual(self.client.get(URL, {"upload": "uploaded"}).data["count"], 1)
         self.assertEqual(self.client.get(URL, {"kind": "inquiry"}).data["count"], 1)
+        # the pending badge counts only the selected kind
+        self.assertEqual(self.client.get(URL, {"kind": "complaint", "upload": "pending"}).data["pending_count"], 0)
+        self.assertEqual(self.client.get(URL, {"kind": "inquiry", "upload": "pending"}).data["pending_count"], 1)
         self.assertEqual(self.client.get(URL, {"search": "0569"}).data["results"][0]["name"], "هالة محمود")
         self.assertEqual(self.client.get(URL, {"search": "سعيد"}).data["count"], 1)
 
@@ -121,7 +124,10 @@ class ComplaintTests(APITestCase):
         text = res.content.decode("utf-8")
         self.assertTrue(text.startswith("﻿"))
         lines = text.strip().splitlines()
-        self.assertEqual(lines[0].lstrip("﻿").split(",")[:3], ["النوع", "رقم الهوية", "الاسم"])
+        header = lines[0].lstrip("﻿").split(",")
+        self.assertEqual(header[:4], ["النوع", "إخفاء بيانات صاحب الشكوى", "الاسم", "رقم الهوية"])
+        for label in ("المصدر", "الحي / المنطقة", "الاشتراك", "الحالة"):
+            self.assertIn(label, header)
         self.assertEqual(len(lines), 2)
         self.assertIn("هالة", lines[1])
         everything = self.client.get(f"{URL}export/").content.decode("utf-8")
@@ -137,3 +143,52 @@ class ComplaintTests(APITestCase):
                         self.client.post(f"{URL}mark-uploaded/", {"ids": [pk]}, format="json"),
                         self.client.delete(f"{URL}{pk}/")):
                 self.assertEqual(res.status_code, 403)
+
+
+class InquiryAndComplaintFieldsTests(APITestCase):
+    """A complaint and an inquiry carry the same fields as the main system's two forms."""
+
+    def setUp(self):
+        self.client.force_authenticate(User.objects.create_user("ed", password=PASSWORD, role=User.Role.EDITOR))
+
+    def test_inquiry_fields(self):
+        res = self.client.post(URL, {
+            "kind": "inquiry", "national_id": "401234567", "name": "سعيد", "phone": "0599123456",
+            "category": "استفسار عن فاتورة", "channel": "phone", "area": "الرمال الجنوبي",
+            "details": "  السطر الأول   \n\n  السطر   الثاني  \n",
+        }, format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual((res.data["kind_display"], res.data["channel"], res.data["channel_display"], res.data["area"]),
+                         ("استفسار", "phone", "اتصال هاتفي", "الرمال الجنوبي"))
+        self.assertEqual(res.data["details"], "السطر الأول\n\nالسطر الثاني")  # line breaks kept, spaces cleaned
+        self.assertEqual(self.client.get(URL, {"search": "فاتوره"}).data["count"], 1)  # Arabic-normalized search
+
+    def test_complaint_fields(self):
+        res = self.client.post(URL, {
+            "kind": "complaint", "hide_identity": True, "national_id": "401234567", "name": "محمد", "point": "12",
+            "phone": "0599123456", "building_number": "5A", "street_number": "1050", "subscription": "77-123",
+            "category": "تسرب مياه", "channel": "whatsapp", "area": "الدرج", "address": "شارع الوحدة",
+            "details": "منذ يومين",
+        }, format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+        for field, value in (("hide_identity", True), ("subscription", "77-123"), ("channel_display", "واتساب"),
+                             ("details", "منذ يومين")):
+            self.assertEqual(res.data[field], value, field)
+        for removed in ("submitter_type", "receipt_prefix", "receipt_number", "exception_reason", "title"):
+            self.assertNotIn(removed, res.data)
+        # the source is searchable by its Arabic label
+        self.assertEqual(self.client.get(URL, {"search": "واتساب"}).data["count"], 1)
+
+    def test_codes_and_source_are_validated(self):
+        res = self.client.post(URL, {"kind": "complaint", "subscription": "12<34>", "name": "x"}, format="json")
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(str(res.data["subscription"][0]), "الاشتراك يحتوي على رموز غير مسموحة.")
+        res = self.client.post(URL, {"kind": "inquiry", "channel": "email", "name": "x"}, format="json")
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(str(res.data["channel"][0]), "اختر المصدر: اتصال هاتفي أو فيسبوك أو واتساب.")
+        # the «إخفاء البيانات» flag alone is not a complaint
+        res = self.client.post(URL, {"kind": "complaint", "hide_identity": True}, format="json")
+        self.assertEqual(res.status_code, 400)
+        res = self.client.post(URL, {"kind": "complaint", "address": "ن" * 301}, format="json")
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("address", res.data)
