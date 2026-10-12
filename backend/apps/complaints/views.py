@@ -2,6 +2,7 @@
 Temporary complaints log («الشكاوى المؤقتة»), used while the main complaints system is down:
 
     GET/POST            /api/complaints/            ?upload=pending|uploaded  ?kind=complaint|inquiry  ?search=
+                        (a complaint and an inquiry have different fields, as in the main system's forms)
     GET/PUT/PATCH/DELETE /api/complaints/{id}/       (DELETE = soft delete, admin can restore)
     POST                /api/complaints/mark-uploaded/   {"ids": [...], "uploaded": true|false}
     GET                 /api/complaints/export/      same filters → CSV (UTF-8 with BOM, opens in Excel)
@@ -20,14 +21,13 @@ from apps.audit.models import AuditLog
 from apps.common.params import text_param
 from apps.locations.views import TrackedViewSet
 
-from .models import Complaint
+from .models import SEARCH_FIELDS, Complaint
 from .serializers import ComplaintSerializer, MarkUploadedSerializer
 
-EXPORT_COLUMNS = [
-    ("kind", "النوع"), ("national_id", "رقم الهوية"), ("name", "الاسم"), ("phone", "رقم الجوال"),
-    ("point", "النقطة"), ("building_number", "رقم المبنى"), ("street_number", "رقم الشارع"),
-    ("category", "نوع الشكوى"), ("address", "العنوان"), ("status", "الحالة"), ("created_at", "تاريخ التسجيل"),
-]
+# CSV columns: the kind, every data field (labelled by the model's verbose names), then status and date.
+EXPORT_COLUMNS = [("kind", "النوع"), ("hide_identity", "إخفاء بيانات صاحب الشكوى")] + [
+    (field, Complaint._meta.get_field(field).verbose_name) for field in SEARCH_FIELDS
+] + [("status", "الحالة"), ("created_at", "تاريخ التسجيل")]
 
 
 class ComplaintViewSet(TrackedViewSet):
@@ -48,8 +48,12 @@ class ComplaintViewSet(TrackedViewSet):
 
     def list(self, request, *args, **kwargs):
         response = super().list(request, *args, **kwargs)
-        # how many are still waiting to be entered into the main system (for the tab badge)
-        response.data["pending_count"] = Complaint.active.filter(status=Complaint.Status.PENDING).count()
+        # how many (of the selected kind) are still waiting to be entered into the main system (tab badge)
+        pending = Complaint.active.filter(status=Complaint.Status.PENDING)
+        kind = text_param(request, "kind")
+        if kind in Complaint.Kind.values:
+            pending = pending.filter(kind=kind)
+        response.data["pending_count"] = pending.count()
         return response
 
     @action(detail=False, methods=["post"], url_path="mark-uploaded")
@@ -83,8 +87,10 @@ class ComplaintViewSet(TrackedViewSet):
         for complaint in self.get_queryset().order_by("created_at", "id"):
             row = []
             for field, _ in EXPORT_COLUMNS:
-                if field in ("kind", "status"):
+                if field in ("kind", "status", "channel"):
                     row.append(getattr(complaint, f"get_{field}_display")())
+                elif field == "hide_identity":
+                    row.append("نعم" if complaint.hide_identity else "")
                 elif field == "created_at":
                     row.append(timezone.localtime(complaint.created_at).strftime("%Y-%m-%d %H:%M"))
                 else:

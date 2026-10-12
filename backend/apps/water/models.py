@@ -135,6 +135,14 @@ class WaterSlot(models.Model):
                 "end_time": self.end_time.strftime(TIME_FORMAT), "note": self.note}
 
 
+class WaterSource(models.TextChoices):
+    """Where an area of the distribution table gets its water from («جدول المياه» shows them all)."""
+
+    UNCLASSIFIED = "", "غير مصنّف"
+    MEKOROT = "mekorot", "خط ماكروت"
+    WELLS = "wells", "الآبار المحلية"
+
+
 class DistributionGroup(models.Model):
     """
     One row of the official «جدول توزيع المياه»: a pair (or set) of days and the list of
@@ -161,7 +169,7 @@ class DistributionGroup(models.Model):
 
     def snapshot(self):
         return {"days": sorted(self.days), "note": self.note,
-                "areas": [a.name for a in self.areas.all()]}
+                "areas": [{"name": a.name, "source": a.source} for a in self.areas.all()]}
 
 
 class DistributionArea(models.Model):
@@ -170,6 +178,8 @@ class DistributionArea(models.Model):
     group = models.ForeignKey(DistributionGroup, on_delete=models.CASCADE, related_name="areas",
                               verbose_name="الموعد")
     name = models.CharField("العنوان", max_length=200)
+    source = models.CharField("مصدر المياه", max_length=10, choices=WaterSource.choices, blank=True,
+                              default=WaterSource.UNCLASSIFIED, db_index=True)
     sort_order = models.IntegerField("الترتيب", default=0)
 
     class Meta:

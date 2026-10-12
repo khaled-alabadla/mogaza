@@ -20,10 +20,30 @@ export function parseAreas(text) {
   return names
 }
 
-/** Add / edit one row of the distribution table: days + addresses (+ optional note). */
+/** Where an area gets its water from. "" = not classified yet (shown in «جدول المياه» only). */
+export const WATER_SOURCES = [
+  { value: 'mekorot', label: 'خط ماكروت', hint: 'المناطق التي تتغذى من خط ماكروت' },
+  { value: 'wells', label: 'الآبار المحلية', hint: 'المناطق التي تتغذى من الآبار المحلية' },
+  { value: '', label: 'غير مصنّف', hint: 'تظهر في «جدول المياه» فقط حتى تُصنَّف' },
+]
+
+/** The row's areas as one text per source: { mekorot: "…\n…", wells: "…", "": "…" }. */
+function textsBySource(areaList) {
+  return Object.fromEntries(
+    WATER_SOURCES.map(({ value }) => [
+      value,
+      (areaList || [])
+        .filter((a) => (a.source || '') === value)
+        .map((a) => a.name)
+        .join('\n'),
+    ]),
+  )
+}
+
+/** Add / edit one row of the distribution table: days + addresses grouped by water source (+ optional note). */
 export default function WaterRowForm({ row, onSubmit, onCancel }) {
   const [days, setDays] = useState(() => new Set(row?.days || []))
-  const [areasText, setAreasText] = useState(() => (row?.area_list || []).map((a) => a.name).join('\n'))
+  const [texts, setTexts] = useState(() => textsBySource(row?.area_list))
   const [note, setNote] = useState(row?.note || '')
   const { errors, formError, saving, submit } = useFormSubmit('تعذر حفظ الموعد.')
 
@@ -35,7 +55,13 @@ export default function WaterRowForm({ row, onSubmit, onCancel }) {
       return next
     })
 
-  const areas = parseAreas(areasText)
+  // a name typed in two boxes keeps the first one (same rule as the server)
+  const areas = []
+  for (const { value: source } of WATER_SOURCES) {
+    for (const name of parseAreas(texts[source])) {
+      if (!areas.some((a) => a.name === name)) areas.push({ name, source })
+    }
+  }
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -72,19 +98,27 @@ export default function WaterRowForm({ row, onSubmit, onCancel }) {
         {errors.days && <p className="field-error">{errors.days}</p>}
       </fieldset>
 
-      <Field id="water-areas" label="العنوان (المناطق والأماكن)" error={errors.areas}>
-        <textarea
-          id="water-areas"
-          rows={8}
-          className={`${controlClass(errors.areas)} leading-relaxed`}
-          value={areasText}
-          onChange={(e) => setAreasText(e.target.value)}
-          placeholder={'اكتب كل عنوان في سطر، أو افصل بينها بـ /\nمثال: النديم / عين جالوت / نادي الزيتون'}
-        />
-        <p className="mt-1 text-xs text-muted">
-          كل سطر أو كل جزء بين «/» يُعتبر عنواناً مستقلاً. عدد العناوين: <span className="num">{areas.length}</span>
+      <fieldset>
+        <legend className="label">العنوان (المناطق والأماكن) حسب مصدر المياه</legend>
+        <p className="mb-3 text-xs text-muted">
+          اكتب كل عنوان في سطر، أو افصل بينها بـ «/». عدد العناوين: <span className="num">{areas.length}</span>
         </p>
-      </Field>
+        <div className="space-y-3">
+          {WATER_SOURCES.map(({ value, label, hint }) => (
+            <Field key={value || 'none'} id={`water-areas-${value || 'none'}`} label={label}>
+              <textarea
+                id={`water-areas-${value || 'none'}`}
+                rows={value ? 4 : 3}
+                className={`${controlClass(errors.areas)} leading-relaxed`}
+                value={texts[value]}
+                onChange={(e) => setTexts((t) => ({ ...t, [value]: e.target.value }))}
+                placeholder={hint}
+              />
+            </Field>
+          ))}
+        </div>
+        {errors.areas && <p className="field-error">{errors.areas}</p>}
+      </fieldset>
 
       <Field id="water-note" label="ملاحظة (اختياري)" error={errors.note}>
         <input id="water-note" className="input" value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} />

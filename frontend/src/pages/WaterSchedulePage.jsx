@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AddButton, DeleteButton, EditButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -6,7 +7,7 @@ import EmptyState from '../components/EmptyState'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
 import SearchInput from '../components/SearchInput'
-import WaterRowForm, { DAYS, formatDays } from '../components/WaterRowForm'
+import WaterRowForm, { DAYS, formatDays, WATER_SOURCES } from '../components/WaterRowForm'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import useConfirmAction from '../hooks/useConfirmAction'
@@ -14,8 +15,20 @@ import { waterTableApi } from '../services/api'
 import { normalizeArabic } from '../utils/arabic'
 import { parseApiError } from '../utils/errors'
 
+/** The three views of the table: everything, or only the areas fed by one water source. */
+const VIEWS = [
+  { value: '', tab: 'جدول المياه', title: 'جدول توزيع المياه', subtitle: 'حسب توجيهات المواطنين' },
+  { value: 'mekorot', tab: 'خط ماكروت', title: 'جدول المياه — خط ماكروت', subtitle: 'المناطق التي تتغذى من خط ماكروت' },
+  { value: 'wells', tab: 'الآبار المحلية', title: 'جدول المياه — الآبار المحلية', subtitle: 'المناطق التي تتغذى من الآبار المحلية' },
+]
+
+/** Small coloured dot marking an area's source in the full table (no dot = not classified). */
+const SOURCE_DOTS = { mekorot: 'bg-brand-600', wells: 'bg-gold-400' }
+
 /** «جدول توزيع المياه حسب توجيهات المواطنين» — the official sheet, with add / edit / delete. */
 export default function WaterSchedulePage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const view = VIEWS.find((v) => v.value === searchParams.get('source')) || VIEWS[0]
   const { canEdit } = useAuth()
   const toast = useToast()
   const [data, setData] = useState({ today: null, results: [] })
@@ -45,16 +58,23 @@ export default function WaterSchedulePage() {
     return () => controller.abort()
   }, [load])
 
-  // Normalised once per load, so typing in the search box only compares strings.
+  // The current view's rows (a source view keeps only that source's areas, and drops rows left empty),
+  // normalised once so typing in the search box only compares strings.
   const searchable = useMemo(
     () =>
-      data.results.map((row) => ({
-        row,
-        dayText: normalizeArabic(row.days.map((d) => DAYS[d]).join(' ')),
-        areas: row.area_list.map((a) => ({ id: a.id, text: normalizeArabic(a.name) })),
-      })),
-    [data.results],
+      data.results
+        .map((row) =>
+          view.value ? { ...row, area_list: row.area_list.filter((a) => a.source === view.value) } : row,
+        )
+        .filter((row) => row.area_list.length)
+        .map((row) => ({
+          row,
+          dayText: normalizeArabic(row.days.map((d) => DAYS[d]).join(' ')),
+          areas: row.area_list.map((a) => ({ id: a.id, text: normalizeArabic(a.name) })),
+        })),
+    [data.results, view.value],
   )
+  const hasClassified = data.results.some((row) => row.area_list.some((a) => a.source))
 
   // The table is small (a handful of rows), so filtering it in the browser is fine.
   const rows = useMemo(() => {
@@ -88,15 +108,46 @@ export default function WaterSchedulePage() {
   })
 
   const openAdd = () => setEditing({ row: null })
+  // the original row (all sources), so editing from a source view never drops the other areas
+  const fullRow = (row) => data.results.find((r) => r.id === row.id) || row
 
   return (
     <div>
-      <PageHeader title="جدول توزيع المياه" subtitle="حسب توجيهات المواطنين">
+      <PageHeader title={view.title} subtitle={view.subtitle}>
         <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
           طباعة
         </button>
         {canEdit && <AddButton onClick={openAdd}>إضافة موعد</AddButton>}
       </PageHeader>
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="inline-flex rounded-xl border border-line bg-white p-1" role="tablist" aria-label="مصدر المياه">
+          {VIEWS.map((v) => (
+            <button
+              key={v.value || 'all'}
+              type="button"
+              role="tab"
+              aria-selected={view.value === v.value}
+              onClick={() => setSearchParams(v.value ? { source: v.value } : {}, { replace: true })}
+              className={`tap rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors ${
+                view.value === v.value ? 'bg-brand-600 text-white' : 'text-muted hover:text-ink'
+              }`}
+            >
+              {v.tab}
+            </button>
+          ))}
+        </div>
+        {!view.value && hasClassified && (
+          <ul className="flex flex-wrap gap-4 text-xs text-muted" aria-label="دليل الألوان">
+            {WATER_SOURCES.filter((src) => SOURCE_DOTS[src.value]).map((src) => (
+              <li key={src.value} className="flex items-center gap-1.5">
+                <span className={`h-2 w-2 rounded-full ${SOURCE_DOTS[src.value]}`} aria-hidden="true" />
+                {src.label}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       <SearchInput
         className="mb-5 print:hidden"
@@ -110,9 +161,16 @@ export default function WaterSchedulePage() {
         loading={loading}
         error={error}
         onRetry={load}
-        isEmpty={!data.results.length}
+        isEmpty={!searchable.length}
         empty={
-          <EmptyState title="لا توجد مواعيد في الجدول" action={canEdit ? <AddButton onClick={openAdd}>إضافة موعد</AddButton> : null} />
+          view.value ? (
+            <EmptyState
+              title={`لا توجد مناطق مصنّفة على «${view.tab}» بعد`}
+              hint={canEdit ? 'صنّف المناطق حسب مصدر المياه من زر «تعديل» في جدول المياه.' : undefined}
+            />
+          ) : (
+            <EmptyState title="لا توجد مواعيد في الجدول" action={canEdit ? <AddButton onClick={openAdd}>إضافة موعد</AddButton> : null} />
+          )
         }
       >
         {!rows.length ? (
@@ -151,6 +209,13 @@ export default function WaterSchedulePage() {
                                 matches && matches.has(a.id) ? 'rounded bg-gold-100 px-1 font-semibold text-ink' : undefined
                               }
                             >
+                              {!view.value && SOURCE_DOTS[a.source] && (
+                                <span
+                                  className={`me-1 inline-block h-2 w-2 rounded-full align-middle print:hidden ${SOURCE_DOTS[a.source]}`}
+                                  title={a.source_display}
+                                  aria-label={a.source_display}
+                                />
+                              )}
                               {a.name}
                             </span>
                           </span>
@@ -159,8 +224,8 @@ export default function WaterSchedulePage() {
                       {row.note && <p className="mt-2 text-sm text-muted">ملاحظة: {row.note}</p>}
                       {canEdit && (
                         <div className="mt-3 flex justify-end gap-2 print:hidden">
-                          <EditButton onClick={() => setEditing({ row })} />
-                          <DeleteButton onClick={() => deletion.ask(row)} />
+                          <EditButton onClick={() => setEditing({ row: fullRow(row) })} />
+                          <DeleteButton onClick={() => deletion.ask(fullRow(row))} />
                         </div>
                       )}
                     </div>

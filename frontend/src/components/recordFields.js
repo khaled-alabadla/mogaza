@@ -20,20 +20,48 @@ export const STREET_FIELDS = [
   { name: 'official_name', label: 'الاسم الرسمي للشارع', required: true, maxLength: 255, placeholder: 'مثال: عزالدين القسام' },
 ]
 
-export const COMPLAINT_KINDS = [
-  { value: 'complaint', label: 'شكوى' },
-  { value: 'inquiry', label: 'استفسار' },
+// Shared by both forms (same order and labels as the main system's screens). All optional.
+const ID_FIELD = { name: 'national_id', label: 'رقم الهوية', maxLength: 12, numeric: true, inputMode: 'numeric', half: true, placeholder: '401234567' }
+const NAME_FIELD = { name: 'name', label: 'الاسم', maxLength: 150, half: true, placeholder: 'اسم المواطن' }
+const PHONE_FIELD = { name: 'phone', label: 'رقم الجوال', maxLength: 16, numeric: true, inputMode: 'tel', half: true, placeholder: '0599123456' }
+/** «المصدر» — how the citizen got in touch (same choices for complaints and inquiries). */
+export const CHANNELS = [
+  { value: 'phone', label: 'اتصال هاتفي' },
+  { value: 'facebook', label: 'فيسبوك' },
+  { value: 'whatsapp', label: 'واتساب' },
+]
+const CHANNEL_FIELD = { name: 'channel', label: 'المصدر', type: 'select', options: CHANNELS, emptyLabel: '— اختر المصدر —', half: true }
+
+/** «إضافة استفسار» */
+export const INQUIRY_FIELDS = [
+  ID_FIELD,
+  NAME_FIELD,
+  PHONE_FIELD,
+  { name: 'category', label: 'نوع الاستفسار', maxLength: 150, half: true },
+  CHANNEL_FIELD,
+  { name: 'area', label: 'الحي', maxLength: 150, half: true },
+  { name: 'details', label: 'نص الاستفسار', maxLength: 3000, multiline: true, rows: 4, placeholder: 'اكتب نص الاستفسار بالتفصيل هنا…' },
 ]
 
-/** Everything but the kind is optional (the server rejects a record with no data at all). */
+/** «إضافة شكوى» */
 export const COMPLAINT_FIELDS = [
-  { name: 'kind', label: 'نوع الطلب', type: 'select', options: COMPLAINT_KINDS, required: true, emptyLabel: '— اختر —', half: true },
-  { name: 'category', label: 'نوع الشكوى', maxLength: 150, half: true, placeholder: 'مثال: انقطاع مياه' },
-  { name: 'national_id', label: 'رقم الهوية', maxLength: 12, numeric: true, inputMode: 'numeric', half: true, placeholder: '401234567' },
-  { name: 'name', label: 'الاسم', maxLength: 150, half: true, placeholder: 'الاسم الرباعي' },
-  { name: 'phone', label: 'رقم الجوال', maxLength: 16, numeric: true, inputMode: 'tel', half: true, placeholder: '0599123456' },
-  { name: 'point', label: 'النقطة', maxLength: 150, half: true },
-  { name: 'building_number', label: 'رقم المبنى', maxLength: 20, numeric: true, half: true, placeholder: '5A' },
-  { name: 'street_number', label: 'رقم الشارع', maxLength: 20, numeric: true, half: true, placeholder: '1050' },
-  { name: 'address', label: 'العنوان', maxLength: 300, multiline: true, placeholder: 'مثال: تل الهوا - شارع القدس' },
+  { name: 'hide_identity', label: 'إخفاء بيانات صاحب الشكوى', type: 'checkbox' },
+  ID_FIELD,
+  NAME_FIELD,
+  { name: 'point', label: 'رقم النقطة', maxLength: 150, numeric: true, inputMode: 'numeric', half: true },
+  PHONE_FIELD,
+  { name: 'building_number', label: 'مبنى', maxLength: 20, numeric: true, half: true, placeholder: '5A' },
+  { name: 'street_number', label: 'الشارع', maxLength: 20, numeric: true, half: true },
+  { name: 'subscription', label: 'اشتراك', maxLength: 50, numeric: true, half: true },
+  { name: 'category', label: 'نوع الشكوى', maxLength: 150, half: true },
+  CHANNEL_FIELD,
+  { name: 'area', label: 'المنطقة', maxLength: 150, half: true },
+  { name: 'address', label: 'العنوان', maxLength: 300, half: true },
+  { name: 'details', label: 'تفاصيل الشكوى', maxLength: 3000, multiline: true, rows: 4, placeholder: 'اكتب تفاصيل الشكوى هنا…' },
 ]
+
+/** The form's fields for one kind, with «الحي / المنطقة» suggesting the known neighborhoods. */
+export function complaintFields(kind, neighborhoodNames = []) {
+  const fields = kind === 'inquiry' ? INQUIRY_FIELDS : COMPLAINT_FIELDS
+  return fields.map((f) => (f.name === 'area' ? { ...f, suggestions: neighborhoodNames } : f))
+}

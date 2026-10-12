@@ -174,18 +174,8 @@ export default function UsersPage() {
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {u.is_superuser && !me?.is_superuser ? (
-                      // only the superuser can manage the superuser account (enforced by the API too)
-                      <span
-                        className="badge self-center bg-gold-100 px-3 py-1 font-medium text-gold-700"
-                        title="لا يمكن تعديل حساب المدير الأعلى أو حذفه إلا من قِبله."
-                      >
-                        المدير الأعلى — محمي
-                      </span>
-                    ) : (
-                      <EditButton onClick={() => setEditing({ user: u })} />
-                    )}
-                    {u.is_superuser && !me?.is_superuser ? null : u.id === me?.id ? (
+                    <EditButton onClick={() => setEditing({ user: u })} />
+                    {u.id === me?.id ? (
                       <span className="badge self-center bg-canvas px-3 py-1 font-medium text-muted">حسابك</span>
                     ) : (
                       <>
