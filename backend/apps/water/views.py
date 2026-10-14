@@ -6,7 +6,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.accounts.permissions import LocationPermission
+from apps.accounts.permissions import NeighborhoodPermission, WaterZonePermission
 from apps.audit.mixins import AuditedViewSetMixin
 from apps.audit.models import AuditLog
 from apps.audit.services import log_action
@@ -45,12 +45,12 @@ def log_location_changes(request, before):
 
 class NeighborhoodViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     """
-    Neighborhoods (الأحياء). The list is small and NOT paginated. Same permissions
-    as locations; every write is audit-logged.
+    Neighborhoods (الأحياء). The list is small and NOT paginated. Read by every page,
+    written with search.edit (NeighborhoodPermission); every write is audit-logged.
     """
 
     serializer_class = NeighborhoodSerializer
-    permission_classes = [LocationPermission]
+    permission_classes = [NeighborhoodPermission]
     pagination_class = None
 
     def get_queryset(self):
@@ -92,10 +92,11 @@ class ZonePagination(StandardPagination):
 class WaterZoneViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     """
     Water zones (مناطق المياه): a neighborhood is split into zones whose buildings share one
-    weekly schedule. Read: LocationPermission semantics; write: admin/editor. Audited as "waterzone".
+    weekly schedule. Read: water.view (or search.view: a building's zone is picked there);
+    write: water.edit. Audited as "waterzone".
     """
 
-    permission_classes = [LocationPermission]
+    permission_classes = [WaterZonePermission]
     pagination_class = ZonePagination
 
     def get_serializer_class(self):

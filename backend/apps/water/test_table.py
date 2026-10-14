@@ -113,3 +113,20 @@ class WaterSourceTests(APITestCase):
             res = self.client.post(URL, {"days": [1], "areas": areas}, format="json")
             self.assertEqual(res.status_code, 400, areas)
             self.assertIn("areas", res.data)
+
+
+class WaterTablePermissionTests(APITestCase):
+    def as_user(self, permissions):
+        user = User.objects.create_user(f"w{User.objects.count()}", password="123456", role=User.Role.EDITOR,
+                                        permissions=permissions)
+        self.client.force_authenticate(user)
+
+    def test_water_edit_needed_to_change_the_table(self):
+        row = {"days": [0], "areas": [{"name": "النديم", "source": "mekorot"}]}
+        self.as_user(["water.view", "search.edit"])
+        self.assertEqual(self.client.get(URL).status_code, 200)
+        self.assertEqual(self.client.post(URL, row, format="json").status_code, 403)
+        self.as_user(["search.view"])
+        self.assertEqual(self.client.get(URL).status_code, 403)
+        self.as_user(["water.view", "water.edit"])
+        self.assertEqual(self.client.post(URL, row, format="json").status_code, 201)

@@ -1,6 +1,7 @@
-import { lazy } from 'react'
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { RequireAdmin, RequireEditor, RequireSearchAccess } from './components/RouteGuards'
+import LoadingState from './components/LoadingState'
+import { RequireAdmin, RequirePermission } from './components/RouteGuards'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import MainLayout from './layouts/MainLayout'
@@ -15,6 +16,8 @@ const DashboardPage = lazy(loadDashboard)
 if (window.location.pathname === '/') loadDashboard()
 const WaterSchedulePage = lazy(() => import('./pages/WaterSchedulePage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
+const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
+const ComplaintsReportPage = lazy(() => import('./pages/ComplaintsReportPage'))
 const UsersPage = lazy(() => import('./pages/UsersPage'))
 const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
@@ -26,29 +29,58 @@ export default function App() {
         <ToastProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            {/* printable reports («تصدير PDF»): a bare A4 document, without the navbar / footer */}
+            <Route
+              path="complaints/report"
+              element={
+                <RequirePermission perm="complaints.export">
+                  <Suspense fallback={<LoadingState />}>
+                    <ComplaintsReportPage kind="complaint" />
+                  </Suspense>
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="inquiries/report"
+              element={
+                <RequirePermission perm="inquiries.export">
+                  <Suspense fallback={<LoadingState />}>
+                    <ComplaintsReportPage kind="inquiry" />
+                  </Suspense>
+                </RequirePermission>
+              }
+            />
             <Route element={<MainLayout />}>
               <Route
                 index
                 element={
-                  <RequireSearchAccess>
+                  <RequirePermission perm="search.view">
                     <DashboardPage />
-                  </RequireSearchAccess>
+                  </RequirePermission>
                 }
               />
               <Route
                 path="water"
                 element={
-                  <RequireSearchAccess>
+                  <RequirePermission perm="water.view">
                     <WaterSchedulePage />
-                  </RequireSearchAccess>
+                  </RequirePermission>
                 }
               />
               <Route
                 path="complaints"
                 element={
-                  <RequireEditor>
+                    <RequirePermission perm="complaints.view">
                     <ComplaintsPage />
-                  </RequireEditor>
+                  </RequirePermission>
+                }
+              />
+              <Route
+                path="inquiries"
+                element={
+                  <RequirePermission perm="inquiries.view">
+                    <InquiriesPage />
+                  </RequirePermission>
                 }
               />
               <Route

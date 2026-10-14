@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import WaterRowForm, { parseAreas } from '../components/WaterRowForm'
 import { normalizeArabic } from '../utils/arabic'
 
-const auth = { canEdit: true }
+const auth = { edit: true, can: (key) => (key === 'water.edit' ? auth.edit : key === 'water.view') }
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }))
 vi.mock('../context/ToastContext', () => ({ useToast: () => ({ success: vi.fn(), error: vi.fn() }) }))
 vi.mock('../services/api', () => ({
@@ -95,7 +95,7 @@ describe('WaterSchedulePage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     waterTableApi.list.mockResolvedValue(TABLE)
-    auth.canEdit = true
+    auth.edit = true
   })
 
   it('renders the full table like the paper and marks today', async () => {
@@ -144,11 +144,23 @@ describe('WaterSchedulePage', () => {
   })
 
   it('hides editing controls for viewers', async () => {
-    auth.canEdit = false
+    auth.edit = false
     renderPage()
     await screen.findByText('الدرج')
     expect(screen.queryByRole('button', { name: /إضافة موعد/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /تعديل/ })).not.toBeInTheDocument()
+  })
+
+  it('prints with a formal letterhead for the current view', async () => {
+    window.print = vi.fn()
+    renderPage('/water?source=mekorot')
+    await screen.findByText('الدرج')
+    expect(screen.getByText('بلدية غزة — قسم المعلومات والشكاوي')).toBeInTheDocument()
+    expect(screen.getAllByText('جدول المياه — خط ماكروت')).toHaveLength(2) // screen heading + printed heading
+    expect(screen.getByText(/تاريخ الطباعة/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /طباعة/ }))
+    expect(window.print).toHaveBeenCalled()
+    delete window.print
   })
 
   it('deletes a row after confirmation', async () => {

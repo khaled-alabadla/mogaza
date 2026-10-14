@@ -4,7 +4,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.accounts.permissions import IsAdminRole, LocationPermission, is_admin
+from apps.accounts.permissions import IsAdminRole, SearchPermission, is_admin
 from apps.audit.mixins import AuditedViewSetMixin
 from apps.audit.models import AuditLog
 from apps.common.params import bool_param, int_param, text_param
@@ -21,7 +21,7 @@ class TrackedViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     restore, and audit logging of every mutation.
     """
 
-    permission_classes = [LocationPermission]
+    permission_classes = [SearchPermission]
     model = None
     primary_name_field = None  # matches in this field are ranked first
 

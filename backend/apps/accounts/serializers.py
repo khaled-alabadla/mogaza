@@ -5,6 +5,8 @@ from rest_framework import serializers
 
 from apps.common.validation import exclude_instance
 
+from .models import PERMISSION_KEYS, ordered_permissions
+
 User = get_user_model()
 
 
@@ -40,26 +42,66 @@ class ChangePasswordSerializer(serializers.Serializer):
 
 class CurrentUserSerializer(serializers.ModelSerializer):
     role_display = serializers.CharField(source="get_role_display", read_only=True)
+    # kept for older clients: = the «search.edit» permission
     can_edit = serializers.BooleanField(source="can_edit_locations", read_only=True)
     is_admin = serializers.BooleanField(source="is_admin_role", read_only=True)
+    permissions = serializers.ListField(source="effective_permissions", read_only=True)
 
     class Meta:
         model = User
         fields = ["id", "username", "email", "first_name", "last_name", "role", "role_display",
-                  "can_edit", "is_admin", "is_superuser"]
+                  "can_edit", "is_admin", "is_superuser", "permissions"]
+
+
+class PermissionListField(serializers.Field):
+    """
+    Write: a list of keys from the catalog (deduplicated, stored in catalog order), or null for the
+    role's defaults. Read: the user's effective permissions.
+    """
+
+    default_error_messages = {
+        "not_a_list": "الصلاحيات يجب أن تكون قائمة.",
+        "unknown": "صلاحية غير معروفة: {value}.",
+    }
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("required", False)
+        kwargs.setdefault("allow_null", True)
+        super().__init__(**kwargs)
+
+    def get_attribute(self, instance):
+        return instance.effective_permissions
+
+    def to_representation(self, value):
+        return list(value)
+
+    def to_internal_value(self, data):
+        if not isinstance(data, list):
+            self.fail("not_a_list")
+        for key in data:
+            if not isinstance(key, str) or key not in PERMISSION_KEYS:
+                self.fail("unknown", value=str(key)[:50])
+        return ordered_permissions(data)
 
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, allow_blank=False,
                                      trim_whitespace=False, style={"input_type": "password"})
     role_display = serializers.CharField(source="get_role_display", read_only=True)
+    permissions = PermissionListField()
+    # whether `permissions` are the role's defaults (never customized)
+    uses_role_defaults = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ["id", "username", "email", "first_name", "last_name", "role", "role_display",
-                  "is_active", "is_superuser", "last_login", "date_joined", "password"]
+                  "is_active", "is_superuser", "last_login", "date_joined", "password", "permissions",
+                  "uses_role_defaults"]
         read_only_fields = ["id", "is_superuser", "last_login", "date_joined"]
         extra_kwargs = {"email": {"required": False, "allow_blank": True}}
+
+    def get_uses_role_defaults(self, obj):
+        return obj.permissions is None
 
     def validate_username(self, value):
         value = value.strip()

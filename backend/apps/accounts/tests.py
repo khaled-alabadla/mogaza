@@ -3,7 +3,7 @@ from rest_framework.test import APIClient, APITestCase
 
 from apps.audit.models import AuditLog
 
-from .models import User
+from .models import PERMISSION_KEYS, User
 
 PASSWORD = "S3cure-Pass-2026"
 
@@ -285,3 +285,124 @@ class SuperuserProtectionTests(APITestCase):
         self.assertEqual(res.status_code, 200)
         self.admin.refresh_from_db()
         self.assertFalse(self.admin.is_superuser)
+
+
+class PasswordPolicyTests(APITestCase):
+    """Relaxed on purpose: any password of 6+ characters, even «123456»."""
+
+    def setUp(self):
+        self.admin = User.objects.create_user("admin1", password=PASSWORD, role=User.Role.ADMIN)
+        self.client.force_authenticate(self.admin)
+
+    def test_short_numeric_passwords(self):
+        res = self.client.post("/api/users/", {"username": "simple", "password": "123456"})
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertTrue(User.objects.get(username="simple").check_password("123456"))
+        res = self.client.post("/api/users/", {"username": "short", "password": "12345"})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("password", res.data)
+        # same name as the username is fine too
+        self.assertEqual(self.client.post("/api/users/", {"username": "abcdef", "password": "abcdef"}).status_code,
+                         201)
+
+    def test_change_own_password_to_123456(self):
+        self.client.force_authenticate(None)
+        self.client.login(username="admin1", password=PASSWORD)
+        res = self.client.post("/api/auth/change-password/", {"current_password": PASSWORD, "new_password": "12345"})
+        self.assertEqual(res.status_code, 400)
+        res = self.client.post("/api/auth/change-password/", {"current_password": PASSWORD, "new_password": "123456"})
+        self.assertEqual(res.status_code, 200)
+
+
+class UserPermissionTests(APITestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user("admin1", password=PASSWORD, role=User.Role.ADMIN)
+        self.editor = User.objects.create_user("editor1", password=PASSWORD, role=User.Role.EDITOR)
+        self.viewer = User.objects.create_user("viewer1", password=PASSWORD, role=User.Role.VIEWER)
+
+    def test_role_defaults(self):
+        self.assertEqual(self.admin.effective_permissions, PERMISSION_KEYS)
+        self.assertEqual(self.editor.effective_permissions, PERMISSION_KEYS)
+        self.assertEqual(self.viewer.effective_permissions, ["search.view", "water.view"])
+        self.assertTrue(self.editor.can_edit_locations)
+        self.assertFalse(self.viewer.can_edit_locations)
+        self.editor.is_active = False
+        self.assertEqual(self.editor.effective_permissions, [])
+        self.assertFalse(self.editor.has_perm_key("search.view"))
+
+    def test_admin_always_has_everything(self):
+        self.admin.permissions = ["search.view"]
+        self.admin.save()
+        self.admin.refresh_from_db()
+        self.assertIsNone(self.admin.permissions)
+        self.assertEqual(self.admin.effective_permissions, PERMISSION_KEYS)
+
+    def test_me_returns_effective_permissions(self):
+        self.viewer.permissions = ["inquiries.view", "search.view"]
+        self.viewer.save()
+        self.client.force_authenticate(self.viewer)
+        user = self.client.get("/api/auth/me/").data["user"]
+        self.assertEqual(user["permissions"], ["search.view", "inquiries.view"])  # catalog order
+        self.assertFalse(user["can_edit"])
+        self.client.force_authenticate(self.editor)
+        user = self.client.get("/api/auth/me/").data["user"]
+        self.assertEqual((user["permissions"], user["can_edit"]), (PERMISSION_KEYS, True))
+
+    def test_catalog_is_admin_only(self):
+        url = "/api/auth/permissions/"
+        for user in (None, self.viewer, self.editor):
+            self.client.force_authenticate(user)
+            self.assertEqual(self.client.get(url).status_code, 403)
+        self.client.force_authenticate(self.admin)
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual([p["key"] for p in res.data["permissions"]], PERMISSION_KEYS)
+        self.assertEqual(res.data["permissions"][0],
+                         {"key": "search.view", "label": "عرض البحث عن المواقع", "group": "البحث عن المواقع"})
+        self.assertEqual(res.data["role_defaults"], {"admin": PERMISSION_KEYS, "editor": PERMISSION_KEYS,
+                                                     "viewer": ["search.view", "water.view"]})
+
+    def test_admin_sets_and_resets_permissions(self):
+        self.client.force_authenticate(self.admin)
+        url = f"/api/users/{self.viewer.pk}/"
+        self.assertEqual(self.client.get(url).data["permissions"], ["search.view", "water.view"])
+        self.assertTrue(self.client.get(url).data["uses_role_defaults"])
+        res = self.client.patch(url, {"permissions": ["inquiries.edit", "inquiries.view", "inquiries.view"]},
+                                format="json")
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual(res.data["permissions"], ["inquiries.view", "inquiries.edit"])
+        self.assertFalse(res.data["uses_role_defaults"])
+        self.viewer.refresh_from_db()
+        self.assertEqual(self.viewer.permissions, ["inquiries.view", "inquiries.edit"])
+        log = AuditLog.objects.filter(entity_type="user", entity_id=str(self.viewer.pk)).latest("id")
+        self.assertEqual(log.after_data["permissions"], ["inquiries.view", "inquiries.edit"])
+        # an empty list = no access to any page
+        self.assertEqual(self.client.patch(url, {"permissions": []}, format="json").data["permissions"], [])
+        # null = back to the role's defaults
+        res = self.client.patch(url, {"permissions": None}, format="json")
+        self.assertEqual(res.data["permissions"], ["search.view", "water.view"])
+        self.viewer.refresh_from_db()
+        self.assertIsNone(self.viewer.permissions)
+        # on create too
+        res = self.client.post("/api/users/", {"username": "n1", "password": "123456", "role": "editor",
+                                               "permissions": ["water.view"]}, format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(User.objects.get(username="n1").effective_permissions, ["water.view"])
+
+    def test_unknown_keys_rejected(self):
+        self.client.force_authenticate(self.admin)
+        url = f"/api/users/{self.viewer.pk}/"
+        for value in (["users.view"], ["search.view", 5], "search.view", {"a": 1}):
+            res = self.client.patch(url, {"permissions": value}, format="json")
+            self.assertEqual(res.status_code, 400, value)
+            self.assertIn("permissions", res.data)
+        self.assertEqual(str(self.client.patch(url, {"permissions": ["users.view"]}, format="json")
+                             .data["permissions"][0]), "صلاحية غير معروفة: users.view.")
+
+    def test_admin_role_stores_no_list(self):
+        self.client.force_authenticate(self.admin)
+        res = self.client.patch(f"/api/users/{self.editor.pk}/", {"role": "admin", "permissions": ["search.view"]},
+                                format="json")
+        self.assertEqual(res.data["permissions"], PERMISSION_KEYS)
+        self.editor.refresh_from_db()
+        self.assertIsNone(self.editor.permissions)

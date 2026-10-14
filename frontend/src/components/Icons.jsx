@@ -148,3 +148,35 @@ export const DownloadIcon = (p) => (
     <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />
   </Svg>
 )
+export const QuestionIcon = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6" />
+    <path d="M12 17.2v.1" />
+  </Svg>
+)
+export const PrintIcon = (p) => (
+  <Svg {...p}>
+    <path d="M7 8V4h10v4" />
+    <rect x="3" y="8" width="18" height="8" rx="2" />
+    <path d="M7 14h10v6H7z" />
+  </Svg>
+)
+export const SheetIcon = (p) => (
+  <Svg {...p}>
+    <rect x="4" y="3" width="16" height="18" rx="2" />
+    <path d="M4 9h16M4 15h16M10 9v12" />
+  </Svg>
+)
+export const ShieldIcon = (p) => (
+  <Svg {...p}>
+    <path d="M12 3 5 6v5.5c0 4.4 3 8.2 7 9.5 4-1.3 7-5.1 7-9.5V6l-7-3Z" />
+    <path d="m9 12 2 2 4-4" />
+  </Svg>
+)
+/** Points left (towards the end in RTL); rotate it with a class for the other directions. */
+export const ChevronIcon = (p) => (
+  <Svg {...p}>
+    <path d="m15 6-6 6 6 6" />
+  </Svg>
+)

@@ -59,7 +59,8 @@ const SCOPES = {
 }
 
 export default function DashboardPage() {
-  const { canEdit, isAdmin } = useAuth()
+  const { can, isAdmin } = useAuth()
+  const canEdit = can('search.edit')
   const toast = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
 

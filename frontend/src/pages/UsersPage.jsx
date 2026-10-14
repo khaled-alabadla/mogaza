@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AddButton, DeleteButton, EditButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -16,14 +16,112 @@ import useConfirmAction from '../hooks/useConfirmAction'
 import useDebouncedValue from '../hooks/useDebouncedValue'
 import useFormSubmit from '../hooks/useFormSubmit'
 import usePagedList from '../hooks/usePagedList'
-import { usersApi } from '../services/api'
+import { authApi, usersApi } from '../services/api'
 import { parseApiError } from '../utils/errors'
 import { displayName, formatDateTime, ROLE_LABELS } from '../utils/format'
 
 const PAGE_SIZE = 20
 const ROLE_TONES = { admin: 'bg-gold-100 text-gold-700', editor: 'bg-brand-50 text-brand-700', viewer: 'bg-gray-100 text-muted' }
 
-function UserForm({ user, isSelf, onSubmit, onCancel }) {
+/** 'complaints.edit' → 'complaints' (the section a key belongs to). */
+const sectionOf = (key) => key.split('.')[0]
+const isViewKey = (key) => key.endsWith('.view')
+const sameSet = (a, b) => a.length === b.length && a.every((k) => b.includes(k))
+
+/** The keys a role gets by default (the admin role always has every key). */
+function roleDefaults(catalog, role) {
+  if (role === 'admin') return catalog.permissions.map((p) => p.key)
+  return catalog.role_defaults?.[role] || []
+}
+
+/** Does this user have a permission set different from their role's defaults? */
+function hasCustomPermissions(user, catalog) {
+  if (user.role === 'admin') return false
+  if (typeof user.uses_role_defaults === 'boolean') return !user.uses_role_defaults
+  if (!catalog || !Array.isArray(user.permissions)) return false
+  return !sameSet(user.permissions, roleDefaults(catalog, user.role))
+}
+
+/**
+ * Tick / untick one key, keeping the set sensible: editing or exporting a section implies viewing it,
+ * and no longer viewing a section drops its other rights.
+ */
+function toggleKey(current, key, on) {
+  const next = new Set(current)
+  if (on) {
+    next.add(key)
+    if (!isViewKey(key)) next.add(`${sectionOf(key)}.view`)
+  } else {
+    next.delete(key)
+    if (isViewKey(key)) for (const k of current) if (sectionOf(k) === sectionOf(key)) next.delete(k)
+  }
+  return next
+}
+
+/** «الصلاحيات»: the permission checkboxes, grouped like the API groups them. */
+function PermissionsFieldset({ catalog, selected, disabled, onChange }) {
+  const groups = useMemo(() => {
+    const map = new Map()
+    for (const p of catalog.permissions) {
+      if (!map.has(p.group)) map.set(p.group, [])
+      map.get(p.group).push(p)
+    }
+    return [...map.entries()]
+  }, [catalog])
+
+  function toggleGroup(items, on) {
+    let next = new Set(selected)
+    for (const p of items) next = toggleKey(next, p.key, on)
+    onChange(next)
+  }
+
+  return (
+    <fieldset className="rounded-xl border border-line p-4">
+      <legend className="px-1 text-sm font-bold text-ink">الصلاحيات</legend>
+      {disabled && <p className="mb-3 text-xs text-muted">مدير النظام يملك كل الصلاحيات.</p>}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {groups.map(([group, items]) => {
+          const all = items.every((p) => selected.has(p.key))
+          return (
+            <div key={group} className="rounded-lg bg-canvas px-3 py-2.5">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-ink">{group}</span>
+                <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 accent-brand-600"
+                    checked={all}
+                    disabled={disabled}
+                    onChange={(e) => toggleGroup(items, e.target.checked)}
+                    aria-label={`كل صلاحيات ${group}`}
+                  />
+                  الكل
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                {items.map((p) => (
+                  <label key={p.key} className="tap flex cursor-pointer items-center gap-2 text-sm text-ink">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-brand-600"
+                      checked={selected.has(p.key)}
+                      disabled={disabled}
+                      onChange={(e) => onChange(toggleKey(selected, p.key, e.target.checked))}
+                      aria-label={`${group}: ${p.label}`}
+                    />
+                    {p.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </fieldset>
+  )
+}
+
+function UserForm({ user, isSelf, catalog, onSubmit, onCancel }) {
   const isEdit = Boolean(user)
   const [values, setValues] = useState({
     username: user?.username || '',
@@ -34,9 +132,24 @@ function UserForm({ user, isSelf, onSubmit, onCancel }) {
     is_active: user ? user.is_active : true,
     password: '',
   })
+  const initialPerms = (cat) => new Set(Array.isArray(user?.permissions) ? user.permissions : roleDefaults(cat, values.role))
+  // null until the permissions list has loaded (until then the section is neither shown nor submitted)
+  const [perms, setPerms] = useState(() => (catalog ? initialPerms(catalog) : null))
+  useEffect(() => {
+    if (catalog && perms === null) setPerms(initialPerms(catalog))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalog])
   const { errors, formError, saving, submit } = useFormSubmit('تعذر حفظ المستخدم.')
   const set = (name) => (e) =>
     setValues((v) => ({ ...v, [name]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
+
+  function changeRole(e) {
+    const role = e.target.value
+    setValues((v) => ({ ...v, role }))
+    if (catalog) setPerms(new Set(roleDefaults(catalog, role))) // a new role starts from its defaults
+  }
+  const isAdminRole = values.role === 'admin'
+  const shownPerms = catalog && perms ? (isAdminRole ? new Set(roleDefaults(catalog, 'admin')) : perms) : null
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -45,6 +158,11 @@ function UserForm({ user, isSelf, onSubmit, onCancel }) {
     if (!isEdit && !values.password) clientErrors.password = 'كلمة المرور مطلوبة عند إنشاء مستخدم.'
     const payload = { ...values, username: values.username.trim(), email: values.email.trim() }
     if (!payload.password) delete payload.password
+    if (catalog && perms && !isAdminRole) {
+      // exactly the role's defaults is sent as null, so the account keeps following its role
+      const keys = catalog.permissions.map((p) => p.key).filter((k) => perms.has(k))
+      payload.permissions = sameSet(keys, roleDefaults(catalog, values.role)) ? null : keys
+    }
     if (isSelf) {
       // an admin cannot demote or deactivate their own account
       delete payload.role
@@ -68,7 +186,7 @@ function UserForm({ user, isSelf, onSubmit, onCancel }) {
         {field('first_name', 'الاسم الأول')}
         {field('last_name', 'اسم العائلة')}
         <Field id="u-role" label="الدور" error={errors.role}>
-          <select id="u-role" className="input" value={values.role} onChange={set('role')} disabled={isSelf}>
+          <select id="u-role" className="input" value={values.role} onChange={changeRole} disabled={isSelf}>
             <option value="viewer">مشاهد — بحث وعرض فقط</option>
             <option value="editor">محرر — بحث وإضافة وتعديل وحذف المواقع</option>
             <option value="admin">مدير النظام — كل الصلاحيات وإدارة المستخدمين</option>
@@ -88,7 +206,10 @@ function UserForm({ user, isSelf, onSubmit, onCancel }) {
           </label>
         )}
       </div>
-      <p className="text-xs text-muted">كلمة المرور: 8 أحرف على الأقل، ولا تكون أرقاماً فقط أو شائعة.</p>
+      {shownPerms && (
+        <PermissionsFieldset catalog={catalog} selected={shownPerms} disabled={isAdminRole} onChange={setPerms} />
+      )}
+      <p className="text-xs text-muted">كلمة المرور: 6 أحرف أو أرقام على الأقل.</p>
       <FormActions saving={saving} submitLabel={isEdit ? 'حفظ التعديلات' : 'إنشاء المستخدم'} onCancel={onCancel} />
     </form>
   )
@@ -104,6 +225,17 @@ export default function UsersPage() {
 
   const params = useMemo(() => ({ page, page_size: PAGE_SIZE, search: debounced.trim() || undefined }), [page, debounced])
   const { data, loading, error, reload } = usePagedList(usersApi.list, params)
+
+  // the permission keys and each role's defaults (for the form and the «صلاحيات مخصّصة» badge)
+  const [catalog, setCatalog] = useState(null)
+  useEffect(() => {
+    const controller = new AbortController()
+    authApi
+      .permissions(controller.signal)
+      .then((result) => setCatalog(Array.isArray(result?.permissions) ? result : null))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [])
 
   async function save(payload) {
     if (editing.user) {
@@ -161,6 +293,17 @@ export default function UsersPage() {
                       <span className="font-bold text-ink">{displayName(u)}</span>
                       <span className="num text-sm text-muted">@{u.username}</span>
                       <span className={`badge ${ROLE_TONES[u.role] || ROLE_TONES.viewer}`}>{ROLE_LABELS[u.role]}</span>
+                      {hasCustomPermissions(u, catalog) && (
+                        <span
+                          className="badge bg-canvas text-ink"
+                          title={(catalog?.permissions || [])
+                            .filter((p) => (u.permissions || []).includes(p.key))
+                            .map((p) => `${p.group}: ${p.label}`)
+                            .join('، ')}
+                        >
+                          صلاحيات مخصّصة (<span className="num">{(u.permissions || []).length}</span>)
+                        </span>
+                      )}
                       {!u.is_active && <span className="badge bg-danger-50 text-danger-700">معطّل</span>}
                     </div>
                     <div className="mt-1 text-xs text-muted">
@@ -198,6 +341,7 @@ export default function UsersPage() {
           <UserForm
             user={editing.user}
             isSelf={Boolean(editing.user) && editing.user.id === me?.id}
+            catalog={catalog}
             onSubmit={save}
             onCancel={() => setEditing(null)}
           />

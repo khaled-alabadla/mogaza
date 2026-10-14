@@ -16,7 +16,7 @@ class LocationAdmin(admin.ModelAdmin):
 
 @admin.register(StreetName)
 class StreetNameAdmin(admin.ModelAdmin):
-    list_display = ["common_name", "official_name", "is_active"]
+    list_display = ["common_name", "official_name", "street_number", "is_active"]
     list_filter = ["is_active"]
-    search_fields = ["common_name", "official_name"]
+    search_fields = ["common_name", "official_name", "street_number"]
     readonly_fields = READONLY

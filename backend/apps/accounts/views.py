@@ -15,12 +15,13 @@ from apps.audit.models import AuditLog
 from apps.audit.services import log_action
 from apps.common.params import text_param
 
+from .models import PERMISSIONS, ROLE_DEFAULTS
 from .permissions import IsAdminRole
 from .serializers import ChangePasswordSerializer, CurrentUserSerializer, LoginSerializer, UserSerializer
 
 User = get_user_model()
 
-USER_AUDIT_FIELDS = ["username", "email", "first_name", "last_name", "role", "is_active"]
+USER_AUDIT_FIELDS = ["username", "email", "first_name", "last_name", "role", "is_active", "permissions"]
 
 
 def user_snapshot(user):
@@ -84,6 +85,18 @@ class ChangePasswordView(APIView):
         update_session_auth_hash(request, user)  # stay logged in
         log_action(AuditLog.Action.UPDATE, request=request, entity=user, after={"password_changed": True})
         return Response({"detail": "تم تغيير كلمة المرور بنجاح."})
+
+
+class PermissionCatalogView(APIView):
+    """The permissions an administrator can tick per user, and each role's defaults (admin only)."""
+
+    permission_classes = [IsAdminRole]
+
+    def get(self, request):
+        return Response({
+            "permissions": [{"key": key, "label": label, "group": group} for key, label, group in PERMISSIONS],
+            "role_defaults": {role: list(keys) for role, keys in ROLE_DEFAULTS.items()},
+        })
 
 
 class UserViewSet(AuditedViewSetMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, mixins.CreateModelMixin,

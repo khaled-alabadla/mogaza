@@ -47,7 +47,7 @@ export default function ChangePasswordForm({ onDone, onCancel }) {
           />
         </Field>
       ))}
-      <p className="text-xs text-muted">8 أحرف على الأقل، ولا تكون أرقاماً فقط أو كلمة شائعة.</p>
+      <p className="text-xs text-muted">6 أحرف أو أرقام على الأقل.</p>
       <FormActions saving={saving} submitLabel="تغيير كلمة المرور" onCancel={onCancel} />
     </form>
   )

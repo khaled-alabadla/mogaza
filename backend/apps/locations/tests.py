@@ -305,3 +305,54 @@ class ImportCommandTests(APITestCase):
             path = self.build_workbook(tmp)
             call_command("import_locations", str(path), "--dry-run", stdout=StringIO())
         self.assertEqual(Location.objects.count(), 0)
+
+
+class StreetNumberTests(APITestCase):
+    def setUp(self):
+        self.client.force_authenticate(User.objects.create_user("ed2", password="123456", role=User.Role.EDITOR))
+
+    def test_street_number_saved_validated_and_searchable(self):
+        res = self.client.post("/api/streets/", {"common_name": "شارع الشفاء", "official_name": "عز الدين القسام",
+                                                 "street_number": " 0805 "})
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(res.data["street_number"], "0805")
+        self.assertEqual(self.client.get("/api/streets/", {"search": "0805"}).data["count"], 1)
+        res = self.client.post("/api/streets/", {"common_name": "a", "official_name": "b", "street_number": "5<x>"})
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(str(res.data["street_number"][0]), "رقم الشارع يحتوي على رموز غير مسموحة.")
+        self.assertEqual(self.client.post("/api/streets/", {"common_name": "a", "official_name": "b"}).status_code,
+                         201)  # optional
+
+
+class SearchPermissionTests(APITestCase):
+    def setUp(self):
+        Location.objects.create(place_name="بلدية غزة")
+
+    def as_user(self, permissions):
+        user = User.objects.create_user(f"p{User.objects.count()}", password="123456", role=User.Role.EDITOR,
+                                        permissions=permissions)
+        self.client.force_authenticate(user)
+
+    def test_custom_permissions(self):
+        self.as_user(["water.view"])
+        self.assertEqual(self.client.get("/api/locations/").status_code, 403)
+        self.assertEqual(self.client.get("/api/streets/").status_code, 403)
+        self.assertEqual(self.client.get("/api/neighborhoods/").status_code, 200)  # names: read by every page
+        self.as_user(["search.view"])
+        self.assertEqual(self.client.get("/api/locations/").status_code, 200)
+        self.assertEqual(self.client.post("/api/locations/", {"place_name": "x"}).status_code, 403)
+        self.assertEqual(self.client.post("/api/neighborhoods/", {"name": "حي"}).status_code, 403)
+        self.as_user(["search.view", "search.edit"])
+        self.assertEqual(self.client.post("/api/locations/", {"place_name": "x"}).status_code, 201)
+        self.as_user(["inquiries.view"])
+        self.assertEqual(self.client.get("/api/neighborhoods/").status_code, 200)
+        self.assertEqual(self.client.get("/api/locations/").status_code, 403)
+
+    @override_settings(PUBLIC_SEARCH_ENABLED=True)
+    def test_public_anonymous_search_still_works(self):
+        self.client.force_authenticate(None)
+        self.assertEqual(self.client.get("/api/locations/", {"search": "بلدية"}).data["count"], 1)
+        self.assertEqual(self.client.get("/api/streets/").status_code, 200)
+        self.assertEqual(self.client.get("/api/water-table/").status_code, 200)
+        self.assertEqual(self.client.post("/api/locations/", {"place_name": "x"}).status_code, 403)
+        self.assertEqual(self.client.get("/api/complaints/").status_code, 403)

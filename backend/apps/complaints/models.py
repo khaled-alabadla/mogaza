@@ -23,9 +23,14 @@ class Complaint(TrackedModel):
         INQUIRY = "inquiry", "استفسار"
 
     class Channel(models.TextChoices):
-        PHONE = "phone", "اتصال هاتفي"
         FACEBOOK = "facebook", "فيسبوك"
+        TWITTER = "twitter", "تويتر"
         WHATSAPP = "whatsapp", "واتساب"
+        WEBSITE = "website", "موقع البلدية"
+        PHONE = "phone", "اتصال هاتفي"
+        APP = "app", "تطبيق البلدية"
+        VISIT = "visit", "زيارة"
+        INSTAGRAM = "instagram", "انستقرام"
 
     class Status(models.TextChoices):
         PENDING = "pending", "بانتظار الرفع"
@@ -59,8 +64,16 @@ class Complaint(TrackedModel):
         ordering = ["-created_at", "-id"]
         indexes = [GinIndex(fields=["search_text"], name="complaint_search_trgm", opclasses=["gin_trgm_ops"])]
 
+    # permission-key prefix of each kind («complaints.view», «inquiries.edit» …)
+    PERMISSION_PREFIX = {Kind.COMPLAINT: "complaints", Kind.INQUIRY: "inquiries"}
+
     def __str__(self):
         return f"{self.get_kind_display()} — {self.name or self.category or self.pk}"
+
+    @classmethod
+    def perm_key(cls, kind, action):
+        """The permission key for an action ("view", "edit", "export") on records of `kind`."""
+        return f"{cls.PERMISSION_PREFIX[kind]}.{action}"
 
     def build_search_text(self):
         # the source is searchable by its Arabic label («واتساب»), not its code

@@ -10,7 +10,7 @@ export default function Footer() {
   return (
     <footer className="mt-auto bg-brand-800 text-white/75 print:hidden">
       <Tricolor green="bg-brand-500" />
-      <div className="mx-auto grid max-w-5xl gap-8 px-4 py-8 sm:grid-cols-2 lg:grid-cols-[1.2fr_0.8fr_1.4fr]">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:grid-cols-2 lg:px-8 lg:grid-cols-[1.2fr_0.8fr_1.4fr]">
         <div>
           <div className="flex items-center gap-3">
             <span className="rounded-lg bg-white p-1.5">
@@ -54,7 +54,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="border-t border-white/10">
-        <p className="mx-auto max-w-5xl px-4 py-4 text-center text-xs text-white/70">
+        <p className="mx-auto max-w-6xl px-4 py-4 lg:px-8 text-center text-xs text-white/70">
           © <span className="num">{new Date().getFullYear()}</span> بلدية غزة — جميع الحقوق محفوظة
         </p>
       </div>

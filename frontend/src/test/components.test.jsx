@@ -3,8 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import ConfirmDialog from '../components/ConfirmDialog'
 import LocationCard from '../components/LocationCard'
-import { LOCATION_FIELDS } from '../components/recordFields'
+import { LOCATION_FIELDS, STREET_FIELDS } from '../components/recordFields'
 import RecordForm from '../components/RecordForm'
+import StreetCard from '../components/StreetCard'
 import { parseApiError } from '../utils/errors'
 
 const location = {
@@ -87,6 +88,29 @@ describe('RecordForm', () => {
     await userEvent.type(screen.getByLabelText(/اسم المكان/), 'x')
     await userEvent.click(screen.getByRole('button', { name: 'حفظ' }))
     expect(await screen.findByText('رقم المبنى يحتوي على رموز غير مسموحة.')).toBeInTheDocument()
+  })
+})
+
+describe('Street names', () => {
+  it('the form has an optional «رقم الشارع» (LTR digits)', async () => {
+    const onSubmit = vi.fn().mockResolvedValue()
+    render(<RecordForm fields={STREET_FIELDS} submitLabel="إضافة" onSubmit={onSubmit} onCancel={() => {}} />)
+    const number = screen.getByLabelText(/رقم الشارع/)
+    expect(number).toHaveAttribute('dir', 'ltr')
+    expect(number).toHaveAttribute('maxLength', '20')
+    await userEvent.type(screen.getByLabelText(/الاسم الشائع/), 'الشفا')
+    await userEvent.type(screen.getByLabelText(/الاسم الرسمي/), 'عزالدين القسام')
+    await userEvent.click(screen.getByRole('button', { name: 'إضافة' }))
+    expect(onSubmit).toHaveBeenCalledWith({ common_name: 'الشفا', official_name: 'عزالدين القسام', street_number: '' })
+  })
+
+  it('the card shows the street number only when set', () => {
+    const street = { id: 1, common_name: 'الشفا', official_name: 'عزالدين القسام', street_number: '60310' }
+    const { rerender } = render(<StreetCard street={street} canEdit={false} />)
+    expect(screen.getByText('رقم الشارع')).toBeInTheDocument()
+    expect(screen.getByText('60310')).toHaveClass('num')
+    rerender(<StreetCard street={{ ...street, street_number: '' }} canEdit={false} />)
+    expect(screen.queryByText('رقم الشارع')).not.toBeInTheDocument()
   })
 })
 

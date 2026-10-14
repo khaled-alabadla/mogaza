@@ -3,7 +3,7 @@ import re
 from rest_framework import serializers
 
 from apps.common.validation import code_text
-from apps.locations.serializers import TrackedSerializer, user_label
+from apps.locations.serializers import TrackedSerializer, visible_user_label
 from apps.locations.text import ascii_digits, clean_text
 
 from .models import SEARCH_FIELDS, Complaint
@@ -43,7 +43,7 @@ class ComplaintSerializer(TrackedSerializer):
         extra_kwargs = {
             "kind": {"error_messages": {"invalid_choice": "اختر نوع الطلب: شكوى أو استفسار."}},
             "channel": {"required": False, "allow_blank": True,
-                        "error_messages": {"invalid_choice": "اختر المصدر: اتصال هاتفي أو فيسبوك أو واتساب."}},
+                        "error_messages": {"invalid_choice": "اختر المصدر من القائمة."}},
             # every data field is optional; national_id / phone are checked after Arabic digits and spaces
             # are normalized (validate_* below), so no raw max_length on them
             "national_id": {"required": False, "allow_blank": True, "max_length": None},
@@ -54,7 +54,7 @@ class ComplaintSerializer(TrackedSerializer):
         }
 
     def get_uploaded_by_name(self, obj):
-        return user_label(obj.uploaded_by)
+        return visible_user_label(obj.uploaded_by, self.viewer())
 
     def validate_national_id(self, value):
         value = ascii_digits(value).replace(" ", "")

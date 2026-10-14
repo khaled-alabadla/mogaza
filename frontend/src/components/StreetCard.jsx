@@ -12,6 +12,12 @@ export default function StreetCard({ street, ...actions }) {
           <dt className="text-xs text-muted">الاسم الرسمي</dt>
           <dd className="text-lg font-semibold text-brand-700">{street.official_name}</dd>
         </div>
+        {street.street_number && (
+          <div>
+            <dt className="text-xs text-muted">رقم الشارع</dt>
+            <dd className="num text-lg font-bold text-ink">{street.street_number}</dd>
+          </div>
+        )}
       </dl>
       <RecordCardActions record={street} {...actions} />
     </article>

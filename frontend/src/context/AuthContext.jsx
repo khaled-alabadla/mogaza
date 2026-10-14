@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { authApi, setCsrfToken, setUnauthorizedHandler } from '../services/api'
+import { checkPermission, permissionsOf } from './permissions'
 
 const AuthContext = createContext(null)
 
@@ -52,19 +53,32 @@ export function AuthProvider({ children }) {
     }
   }, [refresh])
 
+  const permissions = useMemo(() => permissionsOf(user), [user])
+  const isAuthenticated = Boolean(user)
+  const isAdmin = Boolean(user?.is_admin)
+
+  /** can('complaints.view') / can(['inquiries.edit', 'complaints.edit']) (any of them). */
+  const can = useCallback(
+    (perm) => checkPermission({ isAdmin, isAuthenticated, publicSearch, permissions }, perm),
+    [isAdmin, isAuthenticated, publicSearch, permissions],
+  )
+
   const value = useMemo(
     () => ({
       user,
       loading,
       publicSearch,
-      isAuthenticated: Boolean(user),
+      isAuthenticated,
       canEdit: Boolean(user?.can_edit),
-      isAdmin: Boolean(user?.is_admin),
+      isAdmin,
+      isSuperuser: Boolean(user?.is_superuser),
+      permissions,
+      can,
       login,
       logout,
       refresh,
     }),
-    [user, loading, publicSearch, login, logout, refresh],
+    [user, loading, publicSearch, isAuthenticated, isAdmin, permissions, can, login, logout, refresh],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

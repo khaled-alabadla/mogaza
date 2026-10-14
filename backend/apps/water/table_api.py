@@ -9,13 +9,13 @@ Each area has a water source: "mekorot" (خط ماكروت), "wells" (الآبا
 An area may also be sent as a plain string (= unclassified).
     DELETE /api/water-table/{id}/
 
-Read: same rule as locations (logged in, or anyone when PUBLIC_SEARCH_ENABLED). Write: admin/editor.
+Read: water.view (or anyone when PUBLIC_SEARCH_ENABLED). Write: water.edit.
 """
 from django.db import transaction
 from rest_framework import serializers, viewsets
 from rest_framework.response import Response
 
-from apps.accounts.permissions import LocationPermission
+from apps.accounts.permissions import WaterPermission
 from apps.audit.mixins import AuditedViewSetMixin
 from apps.locations.text import clean_text
 
@@ -123,7 +123,7 @@ class DistributionGroupViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     """Rows of the official distribution table (see the module docstring). Audited as "watertable"."""
 
     serializer_class = DistributionGroupSerializer
-    permission_classes = [LocationPermission]
+    permission_classes = [WaterPermission]
     pagination_class = None
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
     audit_entity_type = "watertable"

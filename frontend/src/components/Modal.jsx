@@ -4,7 +4,7 @@ import { CloseIcon } from './Icons'
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
-const WIDTHS = { sm: 'max-w-sm', md: 'max-w-lg' }
+const WIDTHS = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-4xl' }
 
 export default function Modal({ open, title, onClose, children, size = 'md' }) {
   const panelRef = useRef(null)

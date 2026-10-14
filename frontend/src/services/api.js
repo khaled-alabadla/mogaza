@@ -46,6 +46,8 @@ export const authApi = {
   logout: () => api.post('/auth/logout/'),
   changePassword: (current_password, new_password) =>
     api.post('/auth/change-password/', { current_password, new_password }).then((r) => r.data),
+  /** (admin) → { permissions: [{ key, label, group }], role_defaults: { admin: [...], editor: [...], viewer: [...] } } */
+  permissions: (signal) => api.get('/auth/permissions/', { signal }).then((r) => r.data),
 }
 
 function crud(resource) {
@@ -69,7 +71,10 @@ export const usersApi = crud('users')
 export const neighborhoodsApi = crud('neighborhoods')
 /** Official water distribution table: `list` → { today, today_display, results: [...] } (not paginated). */
 export const waterTableApi = crud('water-table')
-/** Temporary complaints («الشكاوى المؤقتة»): list adds `pending_count`; CSV export uses the same filters. */
+/**
+ * Complaints and inquiries (`kind`): list adds `pending_count`. `exportUrl` is a formatted .xlsx of
+ * every record matching the same filters (kind required).
+ */
 export const complaintsApi = {
   ...restorable('complaints'),
   markUploaded: (ids, uploaded = true) => api.post('/complaints/mark-uploaded/', { ids, uploaded }).then((r) => r.data),

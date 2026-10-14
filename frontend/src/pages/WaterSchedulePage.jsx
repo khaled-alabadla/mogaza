@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
+import logo from '../assets/logo-320.webp'
 import { AddButton, DeleteButton, EditButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from '../components/EmptyState'
+import { PrintIcon } from '../components/Icons'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
 import SearchInput from '../components/SearchInput'
@@ -14,6 +17,7 @@ import useConfirmAction from '../hooks/useConfirmAction'
 import { waterTableApi } from '../services/api'
 import { normalizeArabic } from '../utils/arabic'
 import { parseApiError } from '../utils/errors'
+import { formatDateTime } from '../utils/format'
 
 /** The three views of the table: everything, or only the areas fed by one water source. */
 const VIEWS = [
@@ -22,6 +26,9 @@ const VIEWS = [
   { value: 'wells', tab: 'الآبار المحلية', title: 'جدول المياه — الآبار المحلية', subtitle: 'المناطق التي تتغذى من الآبار المحلية' },
 ]
 
+/** The printed page: A4 portrait, a row never split across two pages. */
+const PRINT_CSS = '@page { size: A4 portrait; margin: 12mm; }'
+
 /** Small coloured dot marking an area's source in the full table (no dot = not classified). */
 const SOURCE_DOTS = { mekorot: 'bg-brand-600', wells: 'bg-gold-400' }
 
@@ -29,13 +36,22 @@ const SOURCE_DOTS = { mekorot: 'bg-brand-600', wells: 'bg-gold-400' }
 export default function WaterSchedulePage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const view = VIEWS.find((v) => v.value === searchParams.get('source')) || VIEWS[0]
-  const { canEdit } = useAuth()
+  const { can } = useAuth()
+  const canEdit = can('water.edit')
   const toast = useToast()
   const [data, setData] = useState({ today: null, results: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState(null) // { row | null }
+  const [printedAt, setPrintedAt] = useState(() => new Date())
+
+  // the printed header shows when it was printed (button or Ctrl+P)
+  useEffect(() => {
+    const stamp = () => flushSync(() => setPrintedAt(new Date()))
+    window.addEventListener('beforeprint', stamp)
+    return () => window.removeEventListener('beforeprint', stamp)
+  }, [])
 
   const load = useCallback((signal) => {
     setLoading(true)
@@ -113,12 +129,28 @@ export default function WaterSchedulePage() {
 
   return (
     <div>
-      <PageHeader title={view.title} subtitle={view.subtitle}>
-        <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
-          طباعة
-        </button>
-        {canEdit && <AddButton onClick={openAdd}>إضافة موعد</AddButton>}
-      </PageHeader>
+      <style>{PRINT_CSS}</style>
+      {/* the printed page gets a formal letterhead instead of the screen header */}
+      <header className="mb-4 hidden items-center gap-4 border-b-2 border-gray-700 pb-3 print:flex">
+        <img src={logo} alt="" className="h-16 w-16 object-contain" />
+        <div className="flex-1">
+          <p className="text-base font-bold text-black">بلدية غزة — قسم المعلومات والشكاوي</p>
+          <p className="mt-0.5 text-xl font-bold text-black">{view.title}</p>
+          {query.trim() && <p className="text-xs text-gray-700">نتائج البحث عن: «{query.trim()}»</p>}
+        </div>
+        <p className="text-xs text-gray-700">
+          تاريخ الطباعة: <span className="font-medium">{formatDateTime(printedAt)}</span>
+        </p>
+      </header>
+
+      <div className="print:hidden">
+        <PageHeader title={view.title} subtitle={view.subtitle}>
+          <button type="button" className="btn btn-secondary" onClick={() => window.print()}>
+            <PrintIcon className="h-4 w-4" /> طباعة
+          </button>
+          {canEdit && <AddButton onClick={openAdd}>إضافة موعد</AddButton>}
+        </PageHeader>
+      </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div className="inline-flex rounded-xl border border-line bg-white p-1" role="tablist" aria-label="مصدر المياه">
@@ -176,19 +208,19 @@ export default function WaterSchedulePage() {
         {!rows.length ? (
           <EmptyState title={`لا توجد نتائج مطابقة لـ «${query}»`} hint="جرّب كتابة جزء أقصر من اسم المنطقة." />
         ) : (
-          <div className="card overflow-hidden">
+          <div className="card overflow-hidden print:rounded-none print:border-gray-600 print:shadow-none">
             {/* header (≥640px), like the paper */}
-            <div className="hidden grid-cols-[11rem_1fr] border-b border-line bg-canvas text-sm font-bold text-ink sm:grid">
-              <div className="border-l border-line px-4 py-3 text-center">الموعد</div>
+            <div className="hidden grid-cols-[11rem_1fr] border-b border-line bg-canvas text-sm font-bold text-ink sm:grid print:grid print:grid-cols-[11rem_1fr] print:border-gray-600 print:bg-gray-100 print:[print-color-adjust:exact]">
+              <div className="border-l border-line px-4 py-3 text-center print:border-gray-600">الموعد</div>
               <div className="px-4 py-3 text-center">العنوان</div>
             </div>
-            <ul className="divide-y divide-line">
+            <ul className="divide-y divide-line print:divide-gray-600">
               {rows.map(({ row, matches }) => {
                 const isToday = row.days.includes(data.today)
                 return (
-                  <li key={row.id} className={`sm:grid sm:grid-cols-[11rem_1fr] ${isToday ? 'bg-brand-50/50 print:bg-transparent' : ''}`}>
+                  <li key={row.id} className={`break-inside-avoid sm:grid sm:grid-cols-[11rem_1fr] print:grid print:grid-cols-[11rem_1fr] ${isToday ? 'bg-brand-50/50 print:bg-transparent' : ''}`}>
                     <div
-                      className={`flex items-center justify-between gap-2 border-line px-4 py-3 sm:flex-col sm:justify-center sm:border-l sm:text-center ${
+                      className={`flex items-center justify-between gap-2 border-line px-4 py-3 sm:flex-col sm:justify-center sm:border-l sm:text-center print:flex-col print:justify-center print:border-l print:border-gray-600 print:bg-transparent print:text-center ${
                         isToday ? 'bg-brand-50 print:bg-transparent' : 'bg-canvas sm:bg-transparent'
                       }`}
                     >

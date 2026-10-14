@@ -1,15 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AddButton, DeleteButton, EditButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from '../components/EmptyState'
-import { CheckIcon, DownloadIcon, RestoreIcon } from '../components/Icons'
+import { CheckIcon, PrintIcon, RestoreIcon, SheetIcon } from '../components/Icons'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
 import Pagination from '../components/Pagination'
 import RecordForm from '../components/RecordForm'
 import { complaintFields } from '../components/recordFields'
 import SearchInput from '../components/SearchInput'
+import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import useConfirmAction from '../hooks/useConfirmAction'
 import useDebouncedValue from '../hooks/useDebouncedValue'
@@ -17,40 +19,9 @@ import usePagedList from '../hooks/usePagedList'
 import { complaintsApi, neighborhoodsApi } from '../services/api'
 import { parseApiError } from '../utils/errors'
 import { formatDateTime } from '../utils/format'
+import { filterParams, KINDS, UPLOAD_TABS } from './complaintKinds'
 
 const PAGE_SIZE = 20
-
-/** Complaints and inquiries are separate, like locations and streets on the search page. */
-const KINDS = {
-  complaint: {
-    tab: 'الشكاوى',
-    add: 'إضافة شكوى',
-    addTitle: 'إضافة شكوى جديدة',
-    editTitle: 'تعديل الشكوى',
-    created: 'تمت إضافة الشكوى.',
-    deleted: 'تم حذف الشكوى.',
-    deleteMessage: 'هل أنت متأكد من حذف هذه الشكوى؟',
-    pendingEmpty: 'لا توجد شكاوى بانتظار الرفع',
-    empty: 'لا توجد شكاوى',
-  },
-  inquiry: {
-    tab: 'الاستفسارات',
-    add: 'إضافة استفسار',
-    addTitle: 'إضافة استفسار جديد',
-    editTitle: 'تعديل الاستفسار',
-    created: 'تمت إضافة الاستفسار.',
-    deleted: 'تم حذف الاستفسار.',
-    deleteMessage: 'هل أنت متأكد من حذف هذا الاستفسار؟',
-    pendingEmpty: 'لا توجد استفسارات بانتظار الرفع',
-    empty: 'لا توجد استفسارات',
-  },
-}
-
-const UPLOAD_TABS = [
-  { value: 'pending', label: 'بانتظار الرفع' },
-  { value: 'uploaded', label: 'تم الرفع' },
-  { value: '', label: 'الكل' },
-]
 
 const STATUS_TONES = { pending: 'bg-gold-100 text-gold-700', uploaded: 'bg-brand-50 text-brand-700' }
 // Shown in the card header / text block rather than in the details grid
@@ -75,21 +46,23 @@ function Detail({ label, value, name }) {
   )
 }
 
-function ComplaintCard({ complaint: c, fields, selected, onSelect, onToggleUploaded, onEdit, onDelete }) {
+function ComplaintCard({ complaint: c, fields, canEdit, selected, onSelect, onToggleUploaded, onEdit, onDelete }) {
   const uploaded = c.status === 'uploaded'
   const details = fields.filter((f) => !OWN_PLACE.has(f.name) && c[f.name])
   return (
     <li className={`card p-4 transition-colors sm:p-5 ${selected ? 'border-brand-500 ring-2 ring-brand-100' : ''}`}>
       <div className="flex items-start gap-3">
-        <label className="tap -m-2 flex shrink-0 cursor-pointer items-start justify-center p-2">
-          <input
-            type="checkbox"
-            className="mt-1 h-4 w-4 accent-brand-600"
-            checked={selected}
-            onChange={(e) => onSelect(c.id, e.target.checked)}
-            aria-label={`تحديد ${c.kind_display} ${c.name || c.category || c.id}`}
-          />
-        </label>
+        {canEdit && (
+          <label className="tap -m-2 flex shrink-0 cursor-pointer items-start justify-center p-2">
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-brand-600"
+              checked={selected}
+              onChange={(e) => onSelect(c.id, e.target.checked)}
+              aria-label={`تحديد ${c.kind_display} ${c.name || c.category || c.id}`}
+            />
+          </label>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-bold text-ink">{c.category || `${c.kind_display} بدون تصنيف`}</h3>
@@ -105,8 +78,13 @@ function ComplaintCard({ complaint: c, fields, selected, onSelect, onToggleUploa
           {details.length > 0 && (
             <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-3 lg:grid-cols-4">
               {details.map((f) => (
-                // a choice (e.g. «المصدر») shows its Arabic label
-                <Detail key={f.name} name={f.name} label={f.label} value={f.type === 'select' ? c[`${f.name}_display`] : c[f.name]} />
+                // a choice (e.g. «المصدر») shows its Arabic label; «الحي» is stored as its name
+                <Detail
+                  key={f.name}
+                  name={f.name}
+                  label={f.label}
+                  value={(f.type === 'select' && c[`${f.name}_display`]) || c[f.name]}
+                />
               ))}
             </dl>
           )}
@@ -115,24 +93,32 @@ function ComplaintCard({ complaint: c, fields, selected, onSelect, onToggleUploa
             <p className="mt-3 rounded-lg bg-canvas px-3 py-2.5 text-sm whitespace-pre-line text-ink">{c.details}</p>
           )}
 
-          <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-line pt-3">
-            <button type="button" className="btn btn-secondary" onClick={() => onToggleUploaded([c.id], !uploaded)}>
-              {uploaded ? <RestoreIcon className="h-4 w-4" /> : <CheckIcon className="h-4 w-4" />}
-              {uploaded ? 'إرجاع إلى بانتظار الرفع' : 'تم الرفع'}
-            </button>
-            <EditButton onClick={() => onEdit(c)} />
-            <DeleteButton onClick={() => onDelete(c)} />
-          </div>
+          {canEdit && (
+            <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-line pt-3">
+              <button type="button" className="btn btn-secondary" onClick={() => onToggleUploaded([c.id], !uploaded)}>
+                {uploaded ? <RestoreIcon className="h-4 w-4" /> : <CheckIcon className="h-4 w-4" />}
+                {uploaded ? 'إرجاع إلى بانتظار الرفع' : 'تم الرفع'}
+              </button>
+              <EditButton onClick={() => onEdit(c)} />
+              <DeleteButton onClick={() => onDelete(c)} />
+            </div>
+          )}
         </div>
       </div>
     </li>
   )
 }
 
-/** «الشكاوى المؤقتة»: complaints and inquiries recorded while the main system is down, then marked as uploaded. */
-export default function ComplaintsPage() {
+/**
+ * One log («الشكاوى» or «الاستفسارات»): records taken while the main system is down, then marked
+ * as uploaded. Adding / editing / marking needs `<kind>.edit`, the Excel / PDF exports `<kind>.export`.
+ */
+export function ComplaintsLog({ kind }) {
   const toast = useToast()
-  const [kind, setKind] = useState('complaint')
+  const { can } = useAuth()
+  const k = KINDS[kind]
+  const canEdit = can(`${k.perm}.edit`)
+  const canExport = can(`${k.perm}.export`)
   const [tab, setTab] = useState('pending')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -140,26 +126,32 @@ export default function ComplaintsPage() {
   const [editing, setEditing] = useState(null) // { complaint | null }
   const [neighborhoodNames, setNeighborhoodNames] = useState([])
   const debounced = useDebouncedValue(search)
-  const k = KINDS[kind]
 
-  // «الحي / المنطقة» suggests the known neighborhoods (any other text is still accepted)
+  // the inquiry «الحي» select lists the known neighborhoods (only needed by the form)
+  const needNeighborhoods = kind === 'inquiry' && canEdit
   useEffect(() => {
+    if (!needNeighborhoods) return undefined
     const controller = new AbortController()
     neighborhoodsApi
       .list(undefined, controller.signal)
       .then((list) => setNeighborhoodNames((Array.isArray(list) ? list : list.results || []).map((n) => n.name)))
       .catch(() => {})
     return () => controller.abort()
-  }, [])
+  }, [needNeighborhoods])
   const fields = useMemo(() => complaintFields(kind, neighborhoodNames), [kind, neighborhoodNames])
-
-  const filters = useMemo(
-    () => ({ kind, upload: tab || undefined, search: debounced.trim() || undefined }),
-    [kind, tab, debounced],
+  const formFields = useMemo(
+    () => complaintFields(kind, neighborhoodNames, editing?.complaint?.area),
+    [kind, neighborhoodNames, editing],
   )
+
+  const filters = useMemo(() => filterParams(kind, tab, debounced.trim()), [kind, tab, debounced])
   const params = useMemo(() => ({ ...filters, page, page_size: PAGE_SIZE }), [filters, page])
-  // the CSV export uses the same filters as the list (all pages)
-  const exportHref = complaintsApi.exportUrl(Object.fromEntries(Object.entries(filters).filter(([, v]) => v)))
+  // both exports use the same filters as the list (every page)
+  const exportHref = complaintsApi.exportUrl(filters)
+  const reportParams = new URLSearchParams(filters)
+  reportParams.delete('kind') // the report's path already says which log it is
+  const reportQuery = reportParams.toString()
+  const reportHref = `${k.path}/report${reportQuery ? `?${reportQuery}` : ''}`
   const { data, loading, error, reload } = usePagedList(complaintsApi.list, params)
 
   function refresh() {
@@ -212,35 +204,23 @@ export default function ComplaintsPage() {
   const allOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id))
   const openAdd = () => setEditing({ complaint: null })
   const searching = Boolean(debounced.trim())
+  const addButton = canEdit ? <AddButton onClick={openAdd}>{k.add}</AddButton> : null
 
   return (
     <div>
-      <PageHeader
-        title="الشكاوى المؤقتة"
-        subtitle="سجّل الشكاوى والاستفسارات أثناء تعطل النظام الرئيسي، ثم علّمها «تم الرفع» بعد إدخالها إليه."
-      >
-        <a className="btn btn-secondary" href={exportHref}>
-          <DownloadIcon className="h-4 w-4" /> تصدير Excel
-        </a>
-        <AddButton onClick={openAdd}>{k.add}</AddButton>
+      <PageHeader title={k.title} subtitle={k.subtitle}>
+        {canExport && (
+          <>
+            <a className="btn btn-secondary" href={exportHref}>
+              <SheetIcon className="h-4 w-4" /> تصدير Excel
+            </a>
+            <Link className="btn btn-secondary" to={reportHref}>
+              <PrintIcon className="h-4 w-4" /> تصدير PDF
+            </Link>
+          </>
+        )}
+        {addButton}
       </PageHeader>
-
-      <div className="mb-4 inline-flex rounded-xl border border-line bg-white p-1" role="tablist" aria-label="نوع الطلب">
-        {Object.entries(KINDS).map(([value, kd]) => (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={kind === value}
-            onClick={() => changeFilter(setKind)(value)}
-            className={`tap rounded-lg px-5 py-2 text-sm font-bold transition-colors ${
-              kind === value ? 'bg-brand-600 text-white' : 'text-muted hover:text-ink'
-            }`}
-          >
-            {kd.tab}
-          </button>
-        ))}
-      </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="inline-flex shrink-0 self-start rounded-xl border border-line bg-white p-1" role="tablist" aria-label="حالة الرفع">
@@ -264,14 +244,14 @@ export default function ComplaintsPage() {
         </div>
         <SearchInput
           className="flex-1"
-          label="البحث في الشكاوى والاستفسارات"
+          label={k.searchLabel}
           placeholder="ابحث بالاسم أو رقم الهوية أو الجوال أو النوع أو النص…"
           value={search}
           onChange={(e) => changeFilter(setSearch)(e.target.value)}
         />
       </div>
 
-      {data.results.length > 0 && (
+      {canEdit && data.results.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-2.5">
           <label className="tap flex cursor-pointer items-center gap-2 text-sm text-ink">
             <input
@@ -309,7 +289,7 @@ export default function ComplaintsPage() {
           <EmptyState
             title={searching ? 'لا توجد نتائج مطابقة' : tab === 'pending' ? k.pendingEmpty : k.empty}
             hint={tab === 'pending' && !searching ? 'كل ما سُجّل تم رفعه إلى النظام الرئيسي.' : undefined}
-            action={<AddButton onClick={openAdd}>{k.add}</AddButton>}
+            action={addButton}
           />
         }
       >
@@ -319,6 +299,7 @@ export default function ComplaintsPage() {
               key={c.id}
               complaint={c}
               fields={fields}
+              canEdit={canEdit}
               selected={selected.has(c.id)}
               onSelect={select}
               onToggleUploaded={setUploaded}
@@ -330,11 +311,11 @@ export default function ComplaintsPage() {
         <Pagination page={page} pageSize={PAGE_SIZE} count={data.count} onChange={setPage} />
       </AsyncContent>
 
-      <Modal open={Boolean(editing)} title={editing?.complaint ? k.editTitle : k.addTitle} onClose={() => setEditing(null)}>
+      <Modal size="lg" open={Boolean(editing)} title={editing?.complaint ? k.editTitle : k.addTitle} onClose={() => setEditing(null)}>
         {editing && (
           <RecordForm
             key={editing.complaint?.id ?? `new-${kind}`}
-            fields={fields}
+            fields={formFields}
             initial={editing.complaint || {}}
             submitLabel={editing.complaint ? 'حفظ التعديلات' : k.add}
             onSubmit={save}
@@ -357,4 +338,9 @@ export default function ComplaintsPage() {
       />
     </div>
   )
+}
+
+/** «الشكاوى» */
+export default function ComplaintsPage() {
+  return <ComplaintsLog kind="complaint" />
 }

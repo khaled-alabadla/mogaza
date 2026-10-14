@@ -3,16 +3,20 @@ import useFormSubmit from '../hooks/useFormSubmit'
 import Field, { controlClass } from './Field'
 import FormActions from './FormActions'
 import FormAlert from './FormAlert'
+import SearchableSelect from './SearchableSelect'
 
 /**
  * Generic add/edit form. `fields` describes the inputs:
- *   { name, label, required, placeholder, maxLength, numeric, inputMode, multiline, rows, half, suggestions }
- * a select:   { name, label, type: 'select', options: [{ value, label }], emptyLabel }
+ *   { name, label, required, placeholder, maxLength, numeric, inputMode, multiline, rows, half, third, suggestions }
+ *   (`half` / `third` = half / a third of the row on wider screens, otherwise the full row)
+ * a select:   { name, label, type: 'select', options: [{ value, label }], emptyLabel, emptyValue, searchable }
+ *             (`searchable`: a scrolling list that can be narrowed by typing, see SearchableSelect)
+ *             (an empty select is submitted as `emptyValue`, null by default — '' for a text column)
  * a checkbox: { name, label, type: 'checkbox' }  (submitted as true / false)
  * `suggestions` (an array of strings) offers them while typing, but any text is accepted.
  *
  * A select without options (e.g. its list failed to load) is neither shown nor submitted,
- * so a failed request never wipes a stored value; an empty select is submitted as null.
+ * so a failed request never wipes a stored value.
  */
 export default function RecordForm({ fields: allFields, initial, submitLabel, onSubmit, onCancel }) {
   const fields = allFields.filter((f) => f.type !== 'select' || f.options?.length)
@@ -27,7 +31,7 @@ export default function RecordForm({ fields: allFields, initial, submitLabel, on
   function toPayloadValue(f, value) {
     if (f.type === 'checkbox') return Boolean(value)
     if (f.type === 'select') {
-      if (value === '' || value == null) return null
+      if (value === '' || value == null) return f.emptyValue !== undefined ? f.emptyValue : null
       const option = f.options.find((o) => String(o.value) === String(value))
       return option ? option.value : value
     }
@@ -48,11 +52,11 @@ export default function RecordForm({ fields: allFields, initial, submitLabel, on
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <FormAlert message={formError} />
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-6">
         {fields.map((f) => {
           const id = `field-${f.name}`
           const error = errors[f.name]
-          const span = f.half ? '' : 'sm:col-span-2'
+          const span = f.third ? 'sm:col-span-2' : f.half ? 'sm:col-span-3' : 'sm:col-span-6'
           if (f.type === 'checkbox') {
             return (
               <label key={f.name} className={`tap flex cursor-pointer items-center gap-2.5 text-sm font-medium text-ink ${span}`}>
@@ -83,7 +87,18 @@ export default function RecordForm({ fields: allFields, initial, submitLabel, on
           )
           return (
             <Field key={f.name} id={id} label={label} error={error} className={span}>
-              {f.type === 'select' ? (
+              {f.type === 'select' && f.searchable ? (
+                <SearchableSelect
+                  id={id}
+                  value={values[f.name]}
+                  options={f.options}
+                  placeholder={f.emptyLabel}
+                  onChange={(value) => setValues((v) => ({ ...v, [f.name]: value }))}
+                  className={common.className}
+                  aria-invalid={common['aria-invalid']}
+                  aria-describedby={common['aria-describedby']}
+                />
+              ) : f.type === 'select' ? (
                 <select {...common}>
                   <option value="">{f.emptyLabel || '—'}</option>
                   {f.options.map((o) => (

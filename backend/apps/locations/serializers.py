@@ -7,21 +7,36 @@ from apps.water.serializers import NEIGHBORHOOD_ERRORS, slot_data
 from .models import Location, StreetName
 from .text import clean_text
 
+
 def user_label(user):
     if not user:
         return None
     return user.get_full_name() or user.get_username()
 
 
+def visible_user_label(user, viewer):
+    """
+    user_label, except that the superuser (the hidden developer account) is never named to anyone
+    but a superuser: None then.
+    """
+    if not user or (user.is_superuser and not getattr(viewer, "is_superuser", False)):
+        return None
+    return user_label(user)
+
+
 class TrackedSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     updated_by_name = serializers.SerializerMethodField()
 
+    def viewer(self):
+        request = self.context.get("request")
+        return request.user if request else None
+
     def get_created_by_name(self, obj):
-        return user_label(obj.created_by)
+        return visible_user_label(obj.created_by, self.viewer())
 
     def get_updated_by_name(self, obj):
-        return user_label(obj.updated_by)
+        return visible_user_label(obj.updated_by, self.viewer())
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -104,12 +119,14 @@ class LocationSerializer(TrackedSerializer):
 class StreetNameSerializer(TrackedSerializer):
     class Meta:
         model = StreetName
-        fields = ["id", "common_name", "official_name", "is_active", "created_at", "updated_at",
+        fields = ["id", "common_name", "official_name", "street_number", "is_active", "created_at", "updated_at",
                   "created_by_name", "updated_by_name"]
         read_only_fields = ["id", "is_active", "created_at", "updated_at"]
         extra_kwargs = {
             "common_name": {"error_messages": {"blank": "الاسم الشائع مطلوب.", "required": "الاسم الشائع مطلوب."}},
             "official_name": {"error_messages": {"blank": "الاسم الرسمي مطلوب.", "required": "الاسم الرسمي مطلوب."}},
+            "street_number": {"required": False, "allow_blank": True,
+                              "error_messages": {"max_length": "رقم الشارع طويل جداً (الحد الأقصى 20 حرفاً)."}},
         }
 
     def validate_common_name(self, value):
@@ -117,3 +134,6 @@ class StreetNameSerializer(TrackedSerializer):
 
     def validate_official_name(self, value):
         return required_text(value, "الاسم الرسمي")
+
+    def validate_street_number(self, value):
+        return code_text(value, "رقم الشارع")

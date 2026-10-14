@@ -138,11 +138,10 @@ if env("DJANGO_CACHE_TABLE"):
 
 AUTH_USER_MODEL = "accounts.User"
 
+# Deliberately relaxed at the municipality's request (simple numeric passwords such as "123456" are allowed):
+# only a minimum length is enforced.
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 6}},
 ]
 
 AUTHENTICATION_BACKENDS = ["apps.accounts.backends.UsernameBackend"]

@@ -99,6 +99,7 @@ class StreetName(TrackedModel):
 
     common_name = models.CharField("الاسم الشائع للشارع", max_length=255)
     official_name = models.CharField("الاسم الرسمي للشارع", max_length=255)
+    street_number = models.CharField("رقم الشارع", max_length=20, blank=True)
 
     class Meta:
         verbose_name = "اسم شارع"
@@ -112,7 +113,8 @@ class StreetName(TrackedModel):
         return f"{self.common_name} (الاسم الرسمي: {self.official_name})"
 
     def build_search_text(self):
-        return normalize_for_search(f"{self.common_name} {self.official_name}")
+        return normalize_for_search(f"{self.common_name} {self.official_name} {self.street_number}")
 
     def snapshot(self):
-        return {"common_name": self.common_name, "official_name": self.official_name, "is_active": self.is_active}
+        return {"common_name": self.common_name, "official_name": self.official_name,
+                "street_number": self.street_number, "is_active": self.is_active}
