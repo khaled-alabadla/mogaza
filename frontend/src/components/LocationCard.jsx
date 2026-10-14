@@ -1,14 +1,6 @@
 import { RecordCardActions } from './ActionButtons'
 import { MapIcon, PinIcon } from './Icons'
-
-function NumberBadge({ label, value }) {
-  return (
-    <div className="flex min-w-[6.5rem] flex-col rounded-lg border border-line bg-canvas px-3 py-2">
-      <span className="text-xs text-muted">{label}</span>
-      <span className="num text-lg font-bold text-ink">{value || '—'}</span>
-    </div>
-  )
-}
+import NumberBadge from './NumberBadge'
 
 export default function LocationCard({ location, ...actions }) {
   return (

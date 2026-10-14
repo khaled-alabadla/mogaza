@@ -104,13 +104,13 @@ describe('Street names', () => {
     expect(onSubmit).toHaveBeenCalledWith({ common_name: 'الشفا', official_name: 'عزالدين القسام', street_number: '' })
   })
 
-  it('the card shows the street number only when set', () => {
+  it('the card shows the street number in a box like the locations (— when empty)', () => {
     const street = { id: 1, common_name: 'الشفا', official_name: 'عزالدين القسام', street_number: '60310' }
     const { rerender } = render(<StreetCard street={street} canEdit={false} />)
     expect(screen.getByText('رقم الشارع')).toBeInTheDocument()
     expect(screen.getByText('60310')).toHaveClass('num')
     rerender(<StreetCard street={{ ...street, street_number: '' }} canEdit={false} />)
-    expect(screen.queryByText('رقم الشارع')).not.toBeInTheDocument()
+    expect(screen.getByText('—')).toHaveClass('num')
   })
 })
 
