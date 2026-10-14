@@ -22,5 +22,8 @@ frontend/dist/
 .DS_Store
 .dev-credentials
 
+
 # Vercel CLI project link
 .vercel/
+
+
