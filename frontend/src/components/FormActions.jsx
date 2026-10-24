@@ -1,7 +1,7 @@
-/** Cancel + submit row shared by every modal form. */
-export default function FormActions({ saving, submitLabel, onCancel, className = 'pt-2' }) {
+/** Cancel + submit row shared by every modal form: pinned to the bottom of the (same-size) form window. */
+export default function FormActions({ saving, submitLabel, onCancel }) {
   return (
-    <div className={`-mx-5 mt-2 flex flex-col-reverse gap-2 border-t border-line px-5 pt-4 ${className} sm:flex-row sm:justify-end`}>
+    <div className="sticky bottom-0 z-10 -mx-5 mt-auto flex flex-col-reverse gap-2 border-t border-line bg-white px-5 py-4 sm:flex-row sm:justify-end">
       <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
         إلغاء
       </button>

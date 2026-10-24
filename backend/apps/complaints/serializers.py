@@ -1,12 +1,14 @@
 import re
+from datetime import timedelta
 
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.common.validation import code_text
 from apps.locations.serializers import TrackedSerializer, visible_user_label
 from apps.locations.text import ascii_digits, clean_text
 
-from .models import SEARCH_FIELDS, Complaint
+from .models import SEARCH_FIELDS, URGENT_SEARCH_FIELDS, Complaint, UrgentComplaint
 
 _NATIONAL_ID = re.compile(r"^\d{9}$")
 # Local mobile / landline: 0599123456 or 082123456; +970 / 00970 / +972 prefixes become 0.
@@ -100,3 +102,60 @@ class MarkUploadedSerializer(serializers.Serializer):
                                 error_messages={"empty": "اختر شكوى واحدة على الأقل.",
                                                 "required": "اختر شكوى واحدة على الأقل."})
     uploaded = serializers.BooleanField(default=True)
+
+
+class UrgentComplaintSerializer(TrackedSerializer):
+    """
+    «الشكاوى العاجلة». The form gives «مقدمة منذ» as a number of days (`submitted_days_ago`); it is kept as the
+    date it stands for (`submitted_on`), so the age (`age_days`) stays right on the following days.
+    """
+
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    age_days = serializers.IntegerField(read_only=True)
+    resolved_by_name = serializers.SerializerMethodField()
+    submitted_days_ago = serializers.IntegerField(
+        write_only=True, required=False, allow_null=True, min_value=0, max_value=3650,
+        error_messages={"invalid": "أدخل عدد الأيام رقماً.", "min_value": "عدد الأيام لا يكون سالباً.",
+                        "max_value": "عدد الأيام كبير جداً."})
+
+    class Meta:
+        model = UrgentComplaint
+        fields = ["id", *URGENT_SEARCH_FIELDS, "submitted_on", "submitted_days_ago", "age_days", "status",
+                  "status_display", "resolved_at", "resolved_by_name", "created_at", "updated_at", "created_by_name",
+                  "updated_by_name"]
+        read_only_fields = ["id", "status", "resolved_at", "created_at", "updated_at"]
+        extra_kwargs = {
+            "phone": {"required": False, "allow_blank": True, "max_length": None},
+            "notes": {**_optional("الملاحظات", DETAILS_LIMIT), "max_length": DETAILS_LIMIT},
+            "submitted_on": {"required": False, "allow_null": True},
+            **{field: _optional(label, UrgentComplaint._meta.get_field(field).max_length)
+               for field, label in {"number": "رقم الشكوى", "name": "الاسم", "category": "نوع الشكوى"}.items()},
+        }
+
+    def get_resolved_by_name(self, obj):
+        return visible_user_label(obj.resolved_by, self.viewer())
+
+    validate_phone = ComplaintSerializer.validate_phone
+    validate_notes = ComplaintSerializer.validate_details
+
+    def validate(self, attrs):
+        for field in ("number", "name", "category"):
+            if field in attrs:
+                attrs[field] = clean_text(attrs[field])
+        if "number" in attrs:
+            attrs["number"] = ascii_digits(attrs["number"])
+        days = attrs.pop("submitted_days_ago", "unset")
+        if days != "unset":
+            attrs["submitted_on"] = None if days is None else timezone.localdate() - timedelta(days=days)
+        merged = {f: getattr(self.instance, f) for f in URGENT_SEARCH_FIELDS} if self.instance else {}
+        merged.update({f: attrs[f] for f in URGENT_SEARCH_FIELDS if f in attrs})
+        if not any(merged.get(f) for f in URGENT_SEARCH_FIELDS):
+            raise serializers.ValidationError("أدخل بيانات الشكوى: حقل واحد على الأقل.")
+        return attrs
+
+
+class MarkResolvedSerializer(serializers.Serializer):
+    ids = serializers.ListField(child=serializers.IntegerField(min_value=1), allow_empty=False, max_length=500,
+                                error_messages={"empty": "اختر شكوى واحدة على الأقل.",
+                                                "required": "اختر شكوى واحدة على الأقل."})
+    resolved = serializers.BooleanField(default=True)

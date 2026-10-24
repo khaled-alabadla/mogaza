@@ -156,6 +156,13 @@
   }
 }
 
+/* A form in the same-size form window fills its height, so its buttons sit at the bottom. */
+.modal-form-body > form {
+  display: flex;
+  min-height: 100%;
+  flex-direction: column;
+}
+
 /* Dialogs: fade the backdrop, lift the panel slightly into place. */
 .modal-backdrop {
   animation: drawer-fade 0.18s ease-out both;

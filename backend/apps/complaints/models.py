@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.postgres.indexes import GinIndex
 from django.db import models
+from django.utils import timezone
 
 from apps.locations.models import TrackedModel
 from apps.locations.text import normalize_for_search
@@ -82,4 +83,52 @@ class Complaint(TrackedModel):
 
     def snapshot(self):
         return {**{field: getattr(self, field) for field in ("kind", "hide_identity", *SEARCH_FIELDS)},
+                "status": self.status, "is_active": self.is_active}
+
+
+URGENT_SEARCH_FIELDS = ("number", "name", "category", "phone", "notes")
+
+
+class UrgentComplaint(TrackedModel):
+    """
+    «الشكاوى العاجلة»: a complaint of the main system that needs following up until it is resolved.
+    It starts «لم يتم الحل»; `submitted_on` (when the citizen submitted it) gives «مقدمة منذ … يوم».
+    """
+
+    class Status(models.TextChoices):
+        UNRESOLVED = "unresolved", "لم يتم الحل"
+        RESOLVED = "resolved", "تم الحل"
+
+    number = models.CharField("رقم الشكوى", max_length=50, blank=True)
+    name = models.CharField("اسم مقدم الشكوى", max_length=150, blank=True)
+    category = models.CharField("نوع الشكوى", max_length=150, blank=True)
+    phone = models.CharField("رقم الجوال", max_length=10, blank=True)
+    submitted_on = models.DateField("تاريخ تقديم الشكوى", null=True, blank=True)
+    notes = models.TextField("ملاحظات", blank=True)
+
+    status = models.CharField("الحالة", max_length=10, choices=Status.choices, default=Status.UNRESOLVED, db_index=True)
+    resolved_at = models.DateTimeField("تاريخ الحل", null=True, blank=True)
+    resolved_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                    related_name="+", verbose_name="حلّها")
+
+    class Meta:
+        verbose_name = "شكوى عاجلة"
+        verbose_name_plural = "الشكاوى العاجلة"
+        ordering = ["-created_at", "-id"]
+        indexes = [GinIndex(fields=["search_text"], name="urgent_search_trgm", opclasses=["gin_trgm_ops"])]
+
+    def __str__(self):
+        return f"شكوى عاجلة — {self.number or self.name or self.pk}"
+
+    @property
+    def age_days(self):
+        """Days since the citizen submitted it (None if the date is unknown)."""
+        return (timezone.localdate() - self.submitted_on).days if self.submitted_on else None
+
+    def build_search_text(self):
+        return normalize_for_search(" ".join(str(getattr(self, f)) for f in URGENT_SEARCH_FIELDS))
+
+    def snapshot(self):
+        return {**{f: getattr(self, f) for f in URGENT_SEARCH_FIELDS},
+                "submitted_on": self.submitted_on.isoformat() if self.submitted_on else None,
                 "status": self.status, "is_active": self.is_active}

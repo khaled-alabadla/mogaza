@@ -13,6 +13,9 @@ export const PERMISSIONS = [
   'inquiries.view',
   'inquiries.edit',
   'inquiries.export',
+  'urgent.view',
+  'urgent.edit',
+  'urgent.export',
   'guide.view',
 ]
 

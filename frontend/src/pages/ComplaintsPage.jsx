@@ -325,7 +325,7 @@ export function ComplaintsLog({ kind }) {
         <Pagination page={page} pageSize={PAGE_SIZE} count={data.count} onChange={setPage} />
       </AsyncContent>
 
-      <Modal size="lg" open={Boolean(editing)} title={editing?.complaint ? k.editTitle : k.addTitle} onClose={() => setEditing(null)}>
+      <Modal size="form" open={Boolean(editing)} title={editing?.complaint ? k.editTitle : k.addTitle} onClose={() => setEditing(null)}>
         {editing && (
           <RecordForm
             key={editing.complaint?.id ?? `new-${kind}`}

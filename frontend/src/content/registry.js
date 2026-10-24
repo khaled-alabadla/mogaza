@@ -58,6 +58,13 @@ export const CONTENT_GROUPS = [
         type: 'textarea',
         default: 'سجّل شكاوى المواطنين أثناء تعطل النظام الرئيسي، ثم علّمها «تم الرفع» بعد إدخالها إليه.',
       },
+      { key: 'urgent.title', label: 'الشكاوى العاجلة — العنوان', default: 'الشكاوى العاجلة' },
+      {
+        key: 'urgent.subtitle',
+        label: 'الشكاوى العاجلة — النص تحت العنوان',
+        type: 'textarea',
+        default: 'شكاوى تحتاج متابعة حتى تُحل: الأقدم أولاً.',
+      },
       { key: 'inquiries.title', label: 'الاستفسارات — العنوان', default: 'الاستفسارات' },
       {
         key: 'inquiries.subtitle',

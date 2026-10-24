@@ -241,8 +241,7 @@ export default function DashboardPage() {
 
       <Modal
         open={Boolean(formState)}
-        // the street form puts its three fields on one row: give it room
-        size={scopeKey === 'streets' ? 'lg' : 'md'}
+        size="form"
         title={formState?.record ? scope.editTitle : scope.addTitle}
         onClose={() => setFormState(null)}
       >

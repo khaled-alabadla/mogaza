@@ -378,7 +378,7 @@ export default function UsersPage() {
       </AsyncContent>
       <Pagination page={page} pageSize={PAGE_SIZE} count={data.count} onChange={setPage} />
 
-      <Modal open={Boolean(editing)} title={editing?.user ? 'تعديل مستخدم' : 'مستخدم جديد'} onClose={() => setEditing(null)}>
+      <Modal size="form" open={Boolean(editing)} title={editing?.user ? 'تعديل مستخدم' : 'مستخدم جديد'} onClose={() => setEditing(null)}>
         {editing && (
           <UserForm
             user={editing.user}

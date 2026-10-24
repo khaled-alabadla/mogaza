@@ -31,6 +31,8 @@ const ENTITY_LABELS = {
   streetname: 'اسم شارع',
   user: 'مستخدم',
   complaint: 'شكوى / استفسار',
+  urgentcomplaint: 'شكوى عاجلة',
+  sitecontent: 'محتوى الموقع',
   watertable: 'جدول المياه',
   waterzone: 'منطقة مياه',
   waterslot: 'موعد مياه',
@@ -64,6 +66,9 @@ const FIELD_LABELS = {
   hide_identity: 'إخفاء بيانات صاحب الشكوى',
   status: 'الحالة',
   note: 'ملاحظة',
+  number: 'رقم الشكوى',
+  notes: 'ملاحظات',
+  submitted_on: 'تاريخ التقديم',
 }
 
 function show(value) {

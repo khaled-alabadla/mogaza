@@ -93,4 +93,10 @@ export const complaintsApi = {
   markUploaded: (ids, uploaded = true) => api.post('/complaints/mark-uploaded/', { ids, uploaded }).then((r) => r.data),
   exportUrl: (params) => `/api/complaints/export/?${new URLSearchParams(params)}`,
 }
+/** «الشكاوى العاجلة»: list adds `unresolved_count`; the Excel export uses the list's filters. */
+export const urgentApi = {
+  ...restorable('urgent-complaints'),
+  markResolved: (ids, resolved = true) => api.post('/urgent-complaints/mark-resolved/', { ids, resolved }).then((r) => r.data),
+  exportUrl: (params) => `/api/urgent-complaints/export/?${new URLSearchParams(params)}`,
+}
 export const auditApi = { list: crud('audit-logs').list }

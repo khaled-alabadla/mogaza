@@ -124,7 +124,7 @@ export default function UserMenu() {
         </div>
       )}
 
-      <Modal open={changing} title="تغيير كلمة المرور" onClose={() => setChanging(false)} size="sm">
+      <Modal open={changing} title="تغيير كلمة المرور" onClose={() => setChanging(false)} size="form">
         {changing && (
           <ChangePasswordForm
             onCancel={() => setChanging(false)}

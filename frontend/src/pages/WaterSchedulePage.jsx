@@ -267,6 +267,7 @@ export default function WaterSchedulePage() {
       </AsyncContent>
 
       <Modal
+        size="form"
         open={Boolean(editing)}
         title={editing?.row ? 'تعديل الموعد' : 'إضافة موعد جديد'}
         onClose={() => setEditing(null)}

@@ -6,6 +6,9 @@ import Tricolor from './Tricolor'
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
 const WIDTHS = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-4xl' }
+/** Every add / edit form opens in a window of the same width; its height follows the form, up to a limit
+    past which the fields scroll and the save / cancel buttons stay at the bottom. */
+const FORM_PANEL = 'flex max-h-[min(88dvh,46rem)] max-w-3xl flex-col overflow-hidden'
 
 export default function Modal({ open, title, onClose, children, size = 'md' }) {
   const panelRef = useRef(null)
@@ -66,10 +69,12 @@ export default function Modal({ open, title, onClose, children, size = 'md' }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`modal-panel relative max-h-[92dvh] w-full ${WIDTHS[size]} overflow-y-auto overscroll-contain rounded-t-2xl bg-white shadow-2xl ring-1 ring-black/5 sm:rounded-2xl`}
+        className={`modal-panel relative w-full ${
+          size === 'form' ? FORM_PANEL : `max-h-[92dvh] ${WIDTHS[size]} overflow-y-auto overscroll-contain`
+        } rounded-t-2xl bg-white shadow-2xl ring-1 ring-black/5 sm:rounded-2xl`}
       >
-        <Tricolor className="sticky top-0 z-10 flex h-1" />
-        <div className="flex items-center justify-between gap-3 border-b border-line py-3 ps-5 pe-3">
+        <Tricolor className="sticky top-0 z-10 flex h-1 shrink-0" />
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-line py-3 ps-5 pe-3">
           <h2 id={titleId} className="text-lg font-bold text-ink">
             {title}
           </h2>
@@ -77,7 +82,7 @@ export default function Modal({ open, title, onClose, children, size = 'md' }) {
             <CloseIcon />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className={size === 'form' ? 'modal-form-body flex-1 overflow-y-auto overscroll-contain px-5 pt-5' : 'p-5'}>{children}</div>
       </div>
     </div>,
     document.body,

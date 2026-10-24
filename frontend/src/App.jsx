@@ -19,6 +19,7 @@ const WaterSchedulePage = lazy(() => import('./pages/WaterSchedulePage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
 const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
 const GuidePage = lazy(() => import('./pages/GuidePage'))
+const UrgentComplaintsPage = lazy(() => import('./pages/UrgentComplaintsPage'))
 const ComplaintsReportPage = lazy(() => import('./pages/ComplaintsReportPage'))
 const UsersPage = lazy(() => import('./pages/UsersPage'))
 const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'))
@@ -85,6 +86,14 @@ export default function App() {
                   element={
                     <RequirePermission perm="guide.view">
                       <GuidePage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="urgent"
+                  element={
+                    <RequirePermission perm="urgent.view">
+                      <UrgentComplaintsPage />
                     </RequirePermission>
                   }
                 />

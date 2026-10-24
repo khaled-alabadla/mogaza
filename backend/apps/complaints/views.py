@@ -11,14 +11,7 @@ Per-user permissions, by kind (the records hold citizens' ID and phone numbers):
 complaints.view / .edit / .export and inquiries.view / .edit / .export. A user only ever sees the kinds
 they may view; adding, editing, deleting and marking «تم الرفع» need «<kind>.edit» for every record touched.
 """
-from io import BytesIO
-from urllib.parse import quote
-
-from django.http import HttpResponse
 from django.utils import timezone
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -28,9 +21,9 @@ from rest_framework.response import Response
 from apps.accounts.permissions import DENIED, has_perm_key
 from apps.audit.models import AuditLog
 from apps.common.params import text_param
-from apps.locations.serializers import visible_user_label
 from apps.locations.views import TrackedViewSet
 
+from .excel import build_workbook, xlsx_response
 from .models import Complaint
 from .serializers import ComplaintSerializer, MarkUploadedSerializer
 
@@ -59,9 +52,7 @@ class ComplaintPermission(BasePermission):
 
 
 # --- Excel export ---------------------------------------------------------------------------------------------
-# Columns of each kind, in the order of that kind's form. (field, header, width, cell type)
-# Cell types: "serial" (row number), "text" (stored as text: leading zeros kept), "long" (wrapped text),
-# "bool", "choice" (Arabic label), "date", "user".
+# Columns of each kind, in the order of that kind's form: (field, header, width, cell type — see excel.cell_value).
 EXPORT_COLUMNS = {
     Complaint.Kind.COMPLAINT: [
         ("serial", "م", 6, "serial"),
@@ -99,21 +90,6 @@ EXPORT_COLUMNS = {
 EXPORT_TITLES = {Complaint.Kind.COMPLAINT: "سجل الشكاوى المؤقتة", Complaint.Kind.INQUIRY: "سجل الاستفسارات"}
 EXPORT_FILE_NAMES = {Complaint.Kind.COMPLAINT: ("شكاوى", "complaints"),
                      Complaint.Kind.INQUIRY: ("استفسارات", "inquiries")}
-ORGANIZATION = "بلدية غزة — قسم المعلومات والشكاوي"
-XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-
-FONT_NAME = "Arial"
-BRAND_GREEN = "1F6F43"
-ZEBRA = "EEF6F1"
-THIN = Side(style="thin", color="B7C9BE")
-BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
-DATE_FORMAT = "yyyy-mm-dd hh:mm"
-HEADER_ROW = 3  # 1: title, 2: filters / date / count, 3: column headers
-
-
-def _local_naive(value):
-    """Excel has no time zones: the local (Gaza) wall-clock time."""
-    return timezone.localtime(value).replace(tzinfo=None) if value else None
 
 
 def _filter_description(request):
@@ -125,91 +101,6 @@ def _filter_description(request):
     if search:
         parts.append(f"البحث: «{search[:100]}»")
     return parts
-
-
-def build_workbook(records, kind, request):
-    """The records of one kind as a formatted, right-to-left Excel workbook (bytes)."""
-    columns = EXPORT_COLUMNS[kind]
-    last_col = get_column_letter(len(columns))
-    wb = Workbook()
-    ws = wb.active
-    ws.title = EXPORT_FILE_NAMES[kind][0]
-    ws.sheet_view.rightToLeft = True
-
-    # title + subtitle, merged across the table's width
-    ws.merge_cells(f"A1:{last_col}1")
-    ws.merge_cells(f"A2:{last_col}2")
-    title = ws["A1"]
-    title.value = f"{ORGANIZATION}\n{EXPORT_TITLES[kind]}"
-    title.font = Font(name=FONT_NAME, size=15, bold=True, color=BRAND_GREEN)
-    title.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    ws.row_dimensions[1].height = 44
-    now = timezone.localtime()
-    subtitle = ws["A2"]
-    subtitle.value = "   |   ".join([*_filter_description(request),
-                                     f"تاريخ التصدير: {now:%Y-%m-%d %H:%M}", f"عدد السجلات: {len(records)}"])
-    subtitle.data_type = "s"
-    subtitle.font = Font(name=FONT_NAME, size=10, color="444444")
-    subtitle.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    ws.row_dimensions[2].height = 22
-
-    header_font = Font(name=FONT_NAME, size=11, bold=True, color="FFFFFF")
-    header_fill = PatternFill("solid", fgColor=BRAND_GREEN)
-    for index, (_, label, width, _) in enumerate(columns, start=1):
-        cell = ws.cell(row=HEADER_ROW, column=index, value=label)
-        cell.font, cell.fill, cell.border = header_font, header_fill, BORDER
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-        ws.column_dimensions[get_column_letter(index)].width = width
-    ws.row_dimensions[HEADER_ROW].height = 32
-
-    body_font = Font(name=FONT_NAME, size=10)
-    zebra = PatternFill("solid", fgColor=ZEBRA)
-    viewer = request.user
-    for number, record in enumerate(records, start=1):
-        row = HEADER_ROW + number
-        for index, (field, _, _, cell_type) in enumerate(columns, start=1):
-            if cell_type == "serial":
-                value = number
-            elif cell_type == "bool":
-                value = "نعم" if getattr(record, field) else "لا"
-            elif cell_type == "choice":
-                value = getattr(record, f"get_{field}_display")()
-            elif cell_type == "date":
-                value = _local_naive(getattr(record, field))
-            elif cell_type == "user":
-                value = visible_user_label(getattr(record, field), viewer) or ""
-            else:
-                value = getattr(record, field) or ""
-            cell = ws.cell(row=row, column=index, value=value)
-            if isinstance(value, str):
-                # always plain text: no "=…" formula (openpyxl's guess) nor number conversion, so
-                # leading zeros survive and formula injection is impossible
-                cell.data_type = "s"
-                cell.number_format = "@"
-            elif cell_type == "date":
-                cell.number_format = DATE_FORMAT
-            cell.font, cell.border = body_font, BORDER
-            cell.alignment = Alignment(horizontal="center" if cell_type in ("serial", "bool", "date") else "right",
-                                       vertical="top", wrap_text=True)
-            if number % 2 == 0:
-                cell.fill = zebra
-    last_row = HEADER_ROW + max(len(records), 1)
-
-    ws.freeze_panes = f"A{HEADER_ROW + 1}"
-    ws.auto_filter.ref = f"A{HEADER_ROW}:{last_col}{last_row}"
-    ws.print_title_rows = f"{HEADER_ROW}:{HEADER_ROW}"
-    ws.page_setup.orientation = ws.ORIENTATION_LANDSCAPE
-    ws.page_setup.paperSize = ws.PAPERSIZE_A4
-    ws.page_setup.fitToWidth = 1
-    ws.page_setup.fitToHeight = 0
-    ws.sheet_properties.pageSetUpPr.fitToPage = True
-    ws.print_options.horizontalCentered = True
-    ws.page_margins.left = ws.page_margins.right = 0.4
-    ws.oddFooter.center.text = "صفحة &P من &N"
-
-    buffer = BytesIO()
-    wb.save(buffer)
-    return buffer.getvalue()
 
 
 class ComplaintViewSet(TrackedViewSet):
@@ -291,10 +182,7 @@ class ComplaintViewSet(TrackedViewSet):
         if not has_perm_key(request.user, Complaint.perm_key(kind, "export")):
             raise PermissionDenied(DENIED)
         records = list(self.get_queryset().select_related("created_by").order_by("created_at", "id"))
-        content = build_workbook(records, kind, request)
-        response = HttpResponse(content, content_type=XLSX_TYPE)
         arabic, ascii_name = EXPORT_FILE_NAMES[kind]
-        day = timezone.localdate().isoformat()
-        response["Content-Disposition"] = (f'attachment; filename="{ascii_name}_{day}.xlsx"; '
-                                           f"filename*=UTF-8''{quote(f'{arabic}_{day}.xlsx')}")
-        return response
+        content = build_workbook(records, columns=EXPORT_COLUMNS[kind], sheet_name=arabic, title=EXPORT_TITLES[kind],
+                                 filters=_filter_description(request), viewer=request.user)
+        return xlsx_response(content, arabic, ascii_name)
