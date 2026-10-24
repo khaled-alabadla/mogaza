@@ -194,9 +194,9 @@ function UserForm({ user, isSelf, catalog, onSubmit, onCancel }) {
         {field('last_name', 'اسم العائلة')}
         <Field id="u-role" label="الدور" error={errors.role}>
           <select id="u-role" className="input" value={values.role} onChange={changeRole} disabled={isSelf}>
-            <option value="viewer">مشاهد — بحث وعرض فقط</option>
-            <option value="editor">محرر — بحث وإضافة وتعديل وحذف المواقع</option>
-            <option value="admin">مدير النظام — كل الصلاحيات وإدارة المستخدمين</option>
+            <option value="viewer">مشاهد (بحث وعرض فقط)</option>
+            <option value="editor">محرر (بحث وإضافة وتعديل وحذف المواقع)</option>
+            <option value="admin">مدير النظام (كل الصلاحيات وإدارة المستخدمين)</option>
           </select>
           {isSelf && <p className="mt-1 text-xs text-muted">لا يمكنك تغيير صلاحية حسابك الخاص.</p>}
         </Field>

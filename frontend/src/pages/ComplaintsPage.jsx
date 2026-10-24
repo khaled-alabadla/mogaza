@@ -343,7 +343,7 @@ export function ComplaintsLog({ kind }) {
         message={k.deleteMessage}
         details={
           deletion.target
-            ? [deletion.target.name, deletion.target.category].filter(Boolean).join(' — ')
+            ? [deletion.target.name, deletion.target.category].filter(Boolean).join('، ')
             : ''
         }
         busy={deletion.busy}

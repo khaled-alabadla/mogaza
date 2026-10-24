@@ -238,7 +238,7 @@ function Checklist({ lead, items }) {
       </ul>
       {all && (
         <p className="mt-3 flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-3 font-bold text-white" role="status">
-          <CheckIcon className="h-5 w-5" /> كل البنود مكتملة — الشكوى جاهزة لـ «حفظ مع التحويل».
+          <CheckIcon className="h-5 w-5" /> كل البنود مكتملة، الشكوى جاهزة لـ «حفظ مع التحويل».
         </p>
       )}
     </div>

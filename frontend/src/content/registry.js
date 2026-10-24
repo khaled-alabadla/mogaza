@@ -17,8 +17,8 @@ export const CONTENT_GROUPS = [
   {
     title: 'شاشة تسجيل الدخول',
     fields: [
-      { key: 'login.quote1', label: 'العبارة — السطر الأول', default: 'أثرٌ جميل' },
-      { key: 'login.quote2', label: 'العبارة — السطر الثاني', default: 'قبل الرحيل' },
+      { key: 'login.quote1', label: 'العبارة: السطر الأول', default: 'أثرٌ جميل' },
+      { key: 'login.quote2', label: 'العبارة: السطر الثاني', default: 'قبل الرحيل' },
       { key: 'login.welcome', label: 'الترحيب', default: 'مرحباً بك' },
       { key: 'login.subtitle', label: 'النص تحت الترحيب', default: 'سجّل الدخول للوصول إلى قسم المعلومات والشكاوي' },
     ],
@@ -26,12 +26,12 @@ export const CONTENT_GROUPS = [
   {
     title: 'فريق العمل',
     fields: [
-      { key: 'credits.1.role', label: 'الأول — الدور', default: 'تم برمجة النظام بواسطة' },
-      { key: 'credits.1.name', label: 'الأول — الاسم', default: 'المهندس بلال سمير قنوع' },
-      { key: 'credits.2.role', label: 'الثاني — الدور', default: 'تم جمع البيانات بواسطة' },
-      { key: 'credits.2.name', label: 'الثاني — الاسم', default: 'الأستاذ سليمان معين حبيب' },
-      { key: 'credits.3.role', label: 'الثالث — الدور', default: 'تحت إشراف' },
-      { key: 'credits.3.name', label: 'الثالث — الاسم', default: 'المهندس محمد ابراهيم بهار' },
+      { key: 'credits.1.role', label: 'الأول: الدور', default: 'تم برمجة النظام بواسطة' },
+      { key: 'credits.1.name', label: 'الأول: الاسم', default: 'المهندس بلال سمير قنوع' },
+      { key: 'credits.2.role', label: 'الثاني: الدور', default: 'تم جمع البيانات بواسطة' },
+      { key: 'credits.2.name', label: 'الثاني: الاسم', default: 'الأستاذ سليمان معين حبيب' },
+      { key: 'credits.3.role', label: 'الثالث: الدور', default: 'تحت إشراف' },
+      { key: 'credits.3.name', label: 'الثالث: الاسم', default: 'المهندس محمد ابراهيم بهار' },
     ],
   },
   {
@@ -51,24 +51,24 @@ export const CONTENT_GROUPS = [
   {
     title: 'الشكاوى والاستفسارات',
     fields: [
-      { key: 'complaints.title', label: 'الشكاوى — العنوان', default: 'الشكاوى' },
+      { key: 'complaints.title', label: 'الشكاوى: العنوان', default: 'الشكاوى' },
       {
         key: 'complaints.subtitle',
-        label: 'الشكاوى — النص تحت العنوان',
+        label: 'الشكاوى: النص تحت العنوان',
         type: 'textarea',
         default: 'سجّل شكاوى المواطنين أثناء تعطل النظام الرئيسي، ثم علّمها «تم الرفع» بعد إدخالها إليه.',
       },
-      { key: 'urgent.title', label: 'الشكاوى العاجلة — العنوان', default: 'الشكاوى العاجلة' },
+      { key: 'urgent.title', label: 'الشكاوى العاجلة: العنوان', default: 'الشكاوى العاجلة' },
       {
         key: 'urgent.subtitle',
-        label: 'الشكاوى العاجلة — النص تحت العنوان',
+        label: 'الشكاوى العاجلة: النص تحت العنوان',
         type: 'textarea',
         default: 'شكاوى تحتاج متابعة حتى تُحل: الأقدم أولاً.',
       },
-      { key: 'inquiries.title', label: 'الاستفسارات — العنوان', default: 'الاستفسارات' },
+      { key: 'inquiries.title', label: 'الاستفسارات: العنوان', default: 'الاستفسارات' },
       {
         key: 'inquiries.subtitle',
-        label: 'الاستفسارات — النص تحت العنوان',
+        label: 'الاستفسارات: النص تحت العنوان',
         type: 'textarea',
         default: 'سجّل استفسارات المواطنين أثناء تعطل النظام الرئيسي، ثم علّمها «تم الرفع» بعد إدخالها إليه.',
       },
@@ -91,15 +91,15 @@ export const CONTENT_GROUPS = [
   {
     title: 'الإدارة',
     fields: [
-      { key: 'users.subtitle', label: 'المستخدمون — النص تحت العنوان', default: 'الحسابات وأدوارها، والصفحات والخيارات التي يملكها كل مستخدم.' },
-      { key: 'audit.subtitle', label: 'سجل العمليات — النص تحت العنوان', default: 'من قام بالتعديل، وماذا تغيّر، ومتى.' },
+      { key: 'users.subtitle', label: 'المستخدمون: النص تحت العنوان', default: 'الحسابات وأدوارها، والصفحات والخيارات التي يملكها كل مستخدم.' },
+      { key: 'audit.subtitle', label: 'سجل العمليات: النص تحت العنوان', default: 'من قام بالتعديل، وماذا تغيّر، ومتى.' },
     ],
   },
   {
     title: 'تذييل الصفحة',
     fields: [
       { key: 'footer.about', label: 'وصف الموقع', type: 'textarea', default: 'قاعدة بيانات المواقع والتقاطعات وجدول توزيع المياه لخدمة المواطنين.' },
-      { key: 'footer.rights', label: 'سطر الحقوق (بعد السنة)', default: 'بلدية غزة — جميع الحقوق محفوظة' },
+      { key: 'footer.rights', label: 'سطر الحقوق (بعد السنة)', default: 'بلدية غزة، جميع الحقوق محفوظة' },
     ],
   },
 ]

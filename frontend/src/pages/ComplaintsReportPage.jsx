@@ -117,7 +117,7 @@ export default function ComplaintsReportPage({ kind }) {
   }, [navigate, k.path])
 
   const uploadLabel = UPLOAD_TABS.find((t) => t.value === upload)?.label || 'الكل'
-  const filterText = [`حالة الرفع: ${uploadLabel}`, search && `عبارة البحث: «${search}»`].filter(Boolean).join(' — ')
+  const filterText = [`حالة الرفع: ${uploadLabel}`, search && `عبارة البحث: «${search}»`].filter(Boolean).join('، ')
 
   return (
     <div dir="rtl" className="min-h-screen bg-canvas text-ink print:min-h-0 print:bg-white">

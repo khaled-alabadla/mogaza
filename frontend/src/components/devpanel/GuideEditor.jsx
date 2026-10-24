@@ -105,7 +105,7 @@ function LinesInput({ label, hint, value, toText, fromText, rows = 4 }) {
   return (
     <label className="block">
       <span className="mb-1 block text-xs font-medium text-muted">
-        {label} {hint && <span className="font-normal">— {hint}</span>}
+        {label} {hint && <span className="font-normal">({hint})</span>}
       </span>
       <textarea
         className="input py-2 leading-7"
@@ -240,7 +240,7 @@ function BlockFields({ block, set, sections }) {
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted">القسم</span>
               <select className="input py-2" value={block.section || ''} onChange={(e) => set({ section: e.target.value, stage: undefined })}>
-                <option value="">— اختر —</option>
+                <option value="">اختر القسم</option>
                 {sections.map((s) => (
                   <option key={s._k} value={s.id}>
                     {s.title}
@@ -251,7 +251,7 @@ function BlockFields({ block, set, sections }) {
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted">المرحلة (اختياري)</span>
               <select className="input py-2" value={block.stage || ''} onChange={(e) => set({ stage: e.target.value || undefined })}>
-                <option value="">— بدون —</option>
+                <option value="">بدون</option>
                 {(target?.stages || []).map((st) => (
                   <option key={st._k} value={st.id}>
                     {st.title}
@@ -264,7 +264,7 @@ function BlockFields({ block, set, sections }) {
       )
     }
     default:
-      return <p className="text-sm text-muted">نوع غير معروف ({block.type}) — يبقى كما هو.</p>
+      return <p className="text-sm text-muted">نوع غير معروف ({block.type})، يبقى كما هو.</p>
   }
 }
 
@@ -359,7 +359,7 @@ function SectionEditor({ section, onChange, sections }) {
         <Input label="وصف قصير" value={section.summary} onChange={(summary) => onChange({ ...section, summary })} />
         <div className="sm:col-span-2">
           <Input
-            label="رابط صفحة النظام (لزر «فتح الصفحة») — اتركه فارغاً إن لم يوجد"
+            label="رابط صفحة النظام لزر «فتح الصفحة» (اتركه فارغاً إن لم يوجد)"
             dir="ltr"
             placeholder="https://tracking.mogaza.org/wf/…"
             value={section.url}

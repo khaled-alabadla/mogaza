@@ -114,7 +114,7 @@ describe('WaterSchedulePage', () => {
     renderPage()
     await screen.findByText('الدرج')
     await userEvent.click(screen.getByRole('tab', { name: 'خط ماكروت' }))
-    expect(screen.getByRole('heading', { name: 'جدول المياه — خط ماكروت' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'جدول مياه خط ماكروت' })).toBeInTheDocument()
     expect(screen.getByText('النديم')).toBeInTheDocument()
     expect(screen.getByText('الدرج')).toBeInTheDocument()
     expect(screen.queryByText('عين جالوت')).not.toBeInTheDocument()
@@ -155,8 +155,8 @@ describe('WaterSchedulePage', () => {
     window.print = vi.fn()
     renderPage('/water?source=mekorot')
     await screen.findByText('الدرج')
-    expect(screen.getByText('بلدية غزة — قسم المعلومات والشكاوي')).toBeInTheDocument()
-    expect(screen.getAllByText('جدول المياه — خط ماكروت')).toHaveLength(2) // screen heading + printed heading
+    expect(screen.getByText('بلدية غزة | قسم المعلومات والشكاوي')).toBeInTheDocument()
+    expect(screen.getAllByText('جدول مياه خط ماكروت')).toHaveLength(2) // screen heading + printed heading
     expect(screen.getByText(/تاريخ الطباعة/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /طباعة/ }))
     expect(window.print).toHaveBeenCalled()

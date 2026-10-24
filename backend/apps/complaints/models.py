@@ -69,7 +69,7 @@ class Complaint(TrackedModel):
     PERMISSION_PREFIX = {Kind.COMPLAINT: "complaints", Kind.INQUIRY: "inquiries"}
 
     def __str__(self):
-        return f"{self.get_kind_display()} — {self.name or self.category or self.pk}"
+        return f"{self.get_kind_display()}: {self.name or self.category or self.pk}"
 
     @classmethod
     def perm_key(cls, kind, action):
@@ -118,7 +118,7 @@ class UrgentComplaint(TrackedModel):
         indexes = [GinIndex(fields=["search_text"], name="urgent_search_trgm", opclasses=["gin_trgm_ops"])]
 
     def __str__(self):
-        return f"شكوى عاجلة — {self.number or self.name or self.pk}"
+        return f"شكوى عاجلة: {self.number or self.name or self.pk}"
 
     @property
     def age_days(self):

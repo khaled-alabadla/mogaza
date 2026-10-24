@@ -6,7 +6,7 @@ export const LOCATION_FIELDS = [
   { name: 'building_number', label: 'رقم المبنى', maxLength: 20, numeric: true, half: true, placeholder: '122' },
   { name: 'street_number', label: 'رقم الشارع', maxLength: 20, numeric: true, half: true, placeholder: '60310' },
   // options are filled at runtime from /api/neighborhoods/ (see withNeighborhoodOptions)
-  { name: 'neighborhood', label: 'الحي', type: 'select', options: [], emptyLabel: '— بدون حي —' },
+  { name: 'neighborhood', label: 'الحي', type: 'select', options: [], emptyLabel: 'بدون حي' },
 ]
 
 /** LOCATION_FIELDS with the «الحي» select filled from a neighborhoods array. */

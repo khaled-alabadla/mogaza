@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from apps.locations.serializers import visible_user_label
 
-ORGANIZATION = "بلدية غزة — قسم المعلومات والشكاوي"
+ORGANIZATION = "بلدية غزة | قسم المعلومات والشكاوي"
 XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 FONT_NAME = "Arial"

@@ -24,8 +24,8 @@ import { useText } from '../context/ContentContext'
 /** The three views of the table: everything, or only the areas fed by one water source. */
 const VIEWS = [
   { value: '', tab: 'جدول المياه', title: 'جدول توزيع المياه', subtitle: 'حسب توجيهات المواطنين' },
-  { value: 'mekorot', tab: 'خط ماكروت', title: 'جدول المياه — خط ماكروت', subtitle: 'المناطق التي تتغذى من خط ماكروت' },
-  { value: 'wells', tab: 'الآبار المحلية', title: 'جدول المياه — الآبار المحلية', subtitle: 'المناطق التي تتغذى من الآبار المحلية' },
+  { value: 'mekorot', tab: 'خط ماكروت', title: 'جدول مياه خط ماكروت', subtitle: 'المناطق التي تتغذى من خط ماكروت' },
+  { value: 'wells', tab: 'الآبار المحلية', title: 'جدول مياه الآبار المحلية', subtitle: 'المناطق التي تتغذى من الآبار المحلية' },
 ]
 
 /** The printed page: A4 portrait, a row never split across two pages. */
@@ -140,7 +140,7 @@ export default function WaterSchedulePage() {
       <header className="mb-4 hidden items-center gap-4 border-b-2 border-gray-700 pb-3 print:flex">
         <img src={logo} alt="" className="h-16 w-16 object-contain" />
         <div className="flex-1">
-          <p className="text-base font-bold text-black">بلدية غزة — قسم المعلومات والشكاوي</p>
+          <p className="text-base font-bold text-black">بلدية غزة | قسم المعلومات والشكاوي</p>
           <p className="mt-0.5 text-xl font-bold text-black">{view.title}</p>
           {query.trim() && <p className="text-xs text-gray-700">نتائج البحث عن: «{query.trim()}»</p>}
         </div>

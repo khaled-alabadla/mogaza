@@ -262,7 +262,7 @@ export default function UrgentComplaintsPage() {
       <ConfirmDialog
         open={Boolean(deletion.target)}
         message="هل أنت متأكد من حذف هذه الشكوى العاجلة؟"
-        details={deletion.target ? [deletion.target.number, deletion.target.name].filter(Boolean).join(' — ') : ''}
+        details={deletion.target ? [deletion.target.number, deletion.target.name].filter(Boolean).join('، ') : ''}
         busy={deletion.busy}
         onConfirm={deletion.confirm}
         onCancel={deletion.cancel}
