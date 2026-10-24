@@ -18,7 +18,7 @@ describe('GuidePage («دليل القسم»)', () => {
   it('opens on «إضافة شكوى» as a short list of its stages, with a button to its page', () => {
     renderAt()
     expect(screen.getByRole('heading', { name: 'دليل القسم' })).toBeInTheDocument()
-    expect(screen.getAllByRole('tab')).toHaveLength(6)
+    expect(screen.getAllByRole('tab')).toHaveLength(5)
     expect(screen.getByRole('tab', { name: 'إضافة شكوى' })).toHaveAttribute('aria-selected', 'true')
     // the stages start closed: only their titles show
     expect(stage(/استقبال المواطن/)).toHaveAttribute('aria-expanded', 'false')
