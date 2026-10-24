@@ -2,7 +2,7 @@ from django.contrib import admin
 
 from apps.locations.admin import READONLY
 
-from .models import Complaint, UrgentComplaint
+from .models import Complaint, DailyReport, UrgentComplaint
 
 
 @admin.register(Complaint)
@@ -19,3 +19,9 @@ class UrgentComplaintAdmin(admin.ModelAdmin):
     list_filter = ["status", "is_active"]
     search_fields = ["number", "name", "phone", "category"]
     readonly_fields = READONLY + ["resolved_at", "resolved_by"]
+
+
+@admin.register(DailyReport)
+class DailyReportAdmin(admin.ModelAdmin):
+    list_display = ["report_date", "summons", "archived", "updated_at", "updated_by"]
+    readonly_fields = ["updated_at", "updated_by"]

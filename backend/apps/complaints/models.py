@@ -132,3 +132,29 @@ class UrgentComplaint(TrackedModel):
         return {**{f: getattr(self, f) for f in URGENT_SEARCH_FIELDS},
                 "submitted_on": self.submitted_on.isoformat() if self.submitted_on else None,
                 "status": self.status, "is_active": self.is_active}
+
+
+class DailyReport(models.Model):
+    """
+    «التقرير اليومي»: the department's figures of one day (only the latest report is kept, as row 1).
+    `rows`: [{"source": "اتصال هاتفي", "complaints": 201, "inquiries": 71}, ...] in display order.
+    """
+
+    report_date = models.DateField("تاريخ التقرير")
+    rows = models.JSONField("المصادر", default=list)
+    summons = models.PositiveIntegerField("عدد الاستدعاءات (الزيارة الميدانية)", default=0)
+    archived = models.PositiveIntegerField("عدد المراسلات المعالجة والمؤرشفة", default=0)
+    updated_at = models.DateTimeField("آخر تعديل", auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+", verbose_name="عدّله")
+
+    class Meta:
+        verbose_name = "التقرير اليومي"
+        verbose_name_plural = "التقرير اليومي"
+
+    def __str__(self):
+        return f"التقرير اليومي {self.report_date}"
+
+    def snapshot(self):
+        return {"report_date": self.report_date.isoformat() if self.report_date else None, "rows": self.rows,
+                "summons": self.summons, "archived": self.archived}

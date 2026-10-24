@@ -32,6 +32,7 @@ const ENTITY_LABELS = {
   user: 'مستخدم',
   complaint: 'شكوى / استفسار',
   urgentcomplaint: 'شكوى عاجلة',
+  dailyreport: 'التقرير اليومي',
   sitecontent: 'محتوى الموقع',
   watertable: 'جدول المياه',
   waterzone: 'منطقة مياه',

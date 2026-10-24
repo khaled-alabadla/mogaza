@@ -16,6 +16,8 @@ export const PERMISSIONS = [
   'urgent.view',
   'urgent.edit',
   'urgent.export',
+  'report.view',
+  'report.edit',
   'guide.view',
 ]
 

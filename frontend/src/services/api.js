@@ -99,4 +99,9 @@ export const urgentApi = {
   markResolved: (ids, resolved = true) => api.post('/urgent-complaints/mark-resolved/', { ids, resolved }).then((r) => r.data),
   exportUrl: (params) => `/api/urgent-complaints/export/?${new URLSearchParams(params)}`,
 }
+/** «التقرير اليومي»: only the latest report is kept → { report: {...} | null } */
+export const dailyReportApi = {
+  get: (signal) => api.get('/daily-report/', { signal }).then((r) => r.data),
+  save: (report) => api.put('/daily-report/', report).then((r) => r.data),
+}
 export const auditApi = { list: crud('audit-logs').list }
