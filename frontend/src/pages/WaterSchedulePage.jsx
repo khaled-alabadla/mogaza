@@ -2,14 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { flushSync } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
 import logo from '../assets/logo-320.webp'
-import { AddButton, DeleteButton, EditButton } from '../components/ActionButtons'
+import { AddButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from '../components/EmptyState'
-import { PrintIcon } from '../components/Icons'
+import { EditIcon, PrintIcon, TrashIcon } from '../components/Icons'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
 import SearchInput from '../components/SearchInput'
+import Segmented from '../components/Segmented'
 import WaterRowForm, { DAYS, formatDays, WATER_SOURCES } from '../components/WaterRowForm'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -18,6 +19,7 @@ import { waterTableApi } from '../services/api'
 import { normalizeArabic } from '../utils/arabic'
 import { parseApiError } from '../utils/errors'
 import { formatDateTime } from '../utils/format'
+import { useText } from '../context/ContentContext'
 
 /** The three views of the table: everything, or only the areas fed by one water source. */
 const VIEWS = [
@@ -35,7 +37,11 @@ const SOURCE_DOTS = { mekorot: 'bg-brand-600', wells: 'bg-gold-400' }
 /** «جدول توزيع المياه حسب توجيهات المواطنين» — the official sheet, with add / edit / delete. */
 export default function WaterSchedulePage() {
   const [searchParams, setSearchParams] = useSearchParams()
-  const view = VIEWS.find((v) => v.value === searchParams.get('source')) || VIEWS[0]
+  const found = VIEWS.find((v) => v.value === searchParams.get('source')) || VIEWS[0]
+  // the full table's title / subtitle are editable from the developer dashboard
+  const waterTitle = useText('water.title')
+  const waterSubtitle = useText('water.subtitle')
+  const view = found.value ? found : { ...found, title: waterTitle || found.title, subtitle: waterSubtitle }
   const { can } = useAuth()
   const canEdit = can('water.edit')
   const toast = useToast()
@@ -152,25 +158,23 @@ export default function WaterSchedulePage() {
         </PageHeader>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <div className="inline-flex rounded-xl border border-line bg-white p-1" role="tablist" aria-label="مصدر المياه">
-          {VIEWS.map((v) => (
-            <button
-              key={v.value || 'all'}
-              type="button"
-              role="tab"
-              aria-selected={view.value === v.value}
-              onClick={() => setSearchParams(v.value ? { source: v.value } : {}, { replace: true })}
-              className={`tap rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors ${
-                view.value === v.value ? 'bg-brand-600 text-white' : 'text-muted hover:text-ink'
-              }`}
-            >
-              {v.tab}
-            </button>
-          ))}
-        </div>
+      <div className="mb-5 flex flex-col gap-3 print:hidden lg:flex-row lg:items-center">
+        <Segmented
+          label="مصدر المياه"
+          value={view.value}
+          onChange={(value) => setSearchParams(value ? { source: value } : {}, { replace: true })}
+          options={VIEWS.map((v) => ({ value: v.value, label: v.tab }))}
+          className="self-start"
+        />
+        <SearchInput
+          className="flex-1"
+          label="البحث في جدول المياه"
+          placeholder="ابحث عن منطقتك لمعرفة موعد المياه… (مثال: الدرج، دوار حيدر)"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
         {!view.value && hasClassified && (
-          <ul className="flex flex-wrap gap-4 text-xs text-muted" aria-label="دليل الألوان">
+          <ul className="flex shrink-0 flex-wrap gap-3 text-xs text-muted" aria-label="دليل الألوان">
             {WATER_SOURCES.filter((src) => SOURCE_DOTS[src.value]).map((src) => (
               <li key={src.value} className="flex items-center gap-1.5">
                 <span className={`h-2 w-2 rounded-full ${SOURCE_DOTS[src.value]}`} aria-hidden="true" />
@@ -180,14 +184,6 @@ export default function WaterSchedulePage() {
           </ul>
         )}
       </div>
-
-      <SearchInput
-        className="mb-5 print:hidden"
-        label="البحث في جدول المياه"
-        placeholder="ابحث عن منطقتك لمعرفة موعد المياه… (مثال: الدرج، دوار حيدر)"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
 
       <AsyncContent
         loading={loading}
@@ -210,9 +206,9 @@ export default function WaterSchedulePage() {
         ) : (
           <div className="card overflow-hidden print:rounded-none print:border-gray-600 print:shadow-none">
             {/* header (≥640px), like the paper */}
-            <div className="hidden grid-cols-[11rem_1fr] border-b border-line bg-canvas text-sm font-bold text-ink sm:grid print:grid print:grid-cols-[11rem_1fr] print:border-gray-600 print:bg-gray-100 print:[print-color-adjust:exact]">
+            <div className="hidden grid-cols-[11rem_1fr] border-b border-line bg-canvas text-sm font-semibold text-muted sm:grid print:text-ink print:grid print:grid-cols-[11rem_1fr] print:border-gray-600 print:bg-gray-100 print:[print-color-adjust:exact]">
               <div className="border-l border-line px-4 py-3 text-center print:border-gray-600">الموعد</div>
-              <div className="px-4 py-3 text-center">العنوان</div>
+              <div className="px-4 py-3 text-start print:text-center">العنوان</div>
             </div>
             <ul className="divide-y divide-line print:divide-gray-600">
               {rows.map(({ row, matches }) => {
@@ -224,23 +220,30 @@ export default function WaterSchedulePage() {
                         isToday ? 'bg-brand-50 print:bg-transparent' : 'bg-canvas sm:bg-transparent'
                       }`}
                     >
-                      <div className="text-base font-bold text-ink">{formatDays(row.days)}</div>
+                      <div className={`text-base font-bold ${isToday ? 'text-brand-700' : 'text-ink'} print:text-ink`}>{formatDays(row.days)}</div>
                       {isToday && (
-                        <span className="badge bg-brand-600 text-white print:hidden">
+                        <span className="badge bg-brand-600 text-white shadow-sm print:hidden">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold-400" aria-hidden="true" />
                           تصل المياه اليوم
                         </span>
                       )}
+                      {canEdit && (
+                        <div className="flex gap-0.5 print:hidden sm:mt-1">
+                          <button type="button" className="icon-action" aria-label="تعديل" title="تعديل" onClick={() => setEditing({ row: fullRow(row) })}>
+                            <EditIcon className="h-[1.1rem] w-[1.1rem]" />
+                          </button>
+                          <button type="button" className="icon-action icon-action-danger" aria-label="حذف" title="حذف" onClick={() => deletion.ask(fullRow(row))}>
+                            <TrashIcon className="h-[1.1rem] w-[1.1rem]" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <div className="px-4 py-4">
-                      <p className="text-[0.98rem] leading-8 text-ink">
+                      <p className="text-[0.95rem] leading-8 text-ink">
                         {row.area_list.map((a, i) => (
                           <span key={a.id}>
-                            {i > 0 && <span className="mx-1 text-muted">/</span>}
-                            <span
-                              className={
-                                matches && matches.has(a.id) ? 'rounded bg-gold-100 px-1 font-semibold text-ink' : undefined
-                              }
-                            >
+                            {i > 0 && <span className="mx-1.5 text-gray-300 print:text-muted">/</span>}
+                            <span className={matches && matches.has(a.id) ? 'rounded bg-gold-100 px-1 font-semibold' : undefined}>
                               {!view.value && SOURCE_DOTS[a.source] && (
                                 <span
                                   className={`me-1 inline-block h-2 w-2 rounded-full align-middle print:hidden ${SOURCE_DOTS[a.source]}`}
@@ -253,13 +256,7 @@ export default function WaterSchedulePage() {
                           </span>
                         ))}
                       </p>
-                      {row.note && <p className="mt-2 text-sm text-muted">ملاحظة: {row.note}</p>}
-                      {canEdit && (
-                        <div className="mt-3 flex justify-end gap-2 print:hidden">
-                          <EditButton onClick={() => setEditing({ row: fullRow(row) })} />
-                          <DeleteButton onClick={() => deletion.ask(fullRow(row))} />
-                        </div>
-                      )}
+                      {row.note && <p className="mt-2.5 text-sm text-muted">ملاحظة: {row.note}</p>}
                     </div>
                   </li>
                 )

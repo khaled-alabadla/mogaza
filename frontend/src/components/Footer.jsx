@@ -1,11 +1,17 @@
 import { Link } from 'react-router-dom'
 import logo from '../assets/logo-88.webp'
-import { CREDITS } from './Credits'
+import { useCredits } from './Credits'
 import { useNavLinks } from './navLinks'
 import Tricolor from './Tricolor'
+import { useText } from '../context/ContentContext'
 
 export default function Footer() {
   const links = useNavLinks()
+  const credits = useCredits()
+  const brandName = useText('brand.name')
+  const brandOrg = useText('brand.org')
+  const about = useText('footer.about')
+  const rights = useText('footer.rights')
 
   return (
     <footer className="mt-auto bg-brand-800 text-white/75 print:hidden">
@@ -17,12 +23,12 @@ export default function Footer() {
               <img src={logo} alt="" className="h-10 w-auto" width="22" height="40" decoding="async" />
             </span>
             <span className="leading-tight">
-              <span className="block font-bold text-white">قسم المعلومات والشكاوي</span>
-              <span className="block text-sm">بلدية غزة</span>
+              <span className="block font-bold text-white">{brandName}</span>
+              <span className="block text-sm">{brandOrg}</span>
             </span>
           </div>
           <p className="mt-4 max-w-xs text-sm leading-relaxed">
-            قاعدة بيانات المواقع والتقاطعات وجدول توزيع المياه لخدمة المواطنين.
+            {about}
           </p>
         </div>
 
@@ -44,7 +50,7 @@ export default function Footer() {
         <div className="sm:col-span-2 lg:col-span-1">
           <h2 className="mb-3 text-sm font-bold text-white">فريق العمل</h2>
           <dl className="space-y-2.5 text-sm">
-            {CREDITS.map((c) => (
+            {credits.map((c) => (
               <div key={c.name}>
                 <dt className="text-xs text-white/70">{c.role}</dt>
                 <dd className="font-semibold text-white">{c.name}</dd>
@@ -55,7 +61,7 @@ export default function Footer() {
       </div>
       <div className="border-t border-white/10">
         <p className="mx-auto max-w-6xl px-4 py-4 lg:px-8 text-center text-xs text-white/70">
-          © <span className="num">{new Date().getFullYear()}</span> بلدية غزة — جميع الحقوق محفوظة
+          © <span className="num">{new Date().getFullYear()}</span> {rights}
         </p>
       </div>
     </footer>

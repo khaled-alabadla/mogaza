@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom'
 import logo from '../assets/logo-88.webp'
 import { ChevronIcon, CloseIcon } from './Icons'
 import Tricolor from './Tricolor'
+import { useText } from '../context/ContentContext'
 
 const linkClass =
   (collapsed) =>
@@ -17,6 +18,8 @@ const linkClass =
 
 /** Logo + «قسم المعلومات والشكاوي / بلدية غزة» on the green panel. */
 function Brand({ collapsed = false }) {
+  const brandName = useText('brand.name')
+  const brandOrg = useText('brand.org')
   return (
     <Link
       to="/"
@@ -28,8 +31,8 @@ function Brand({ collapsed = false }) {
       </span>
       {!collapsed && (
         <span className="min-w-0 leading-tight">
-          <span className="block text-[0.95rem] font-bold text-white">قسم المعلومات والشكاوي</span>
-          <span className="block text-xs text-white/65">بلدية غزة</span>
+          <span className="block text-[0.95rem] font-bold text-white">{brandName}</span>
+          <span className="block text-xs text-white/65">{brandOrg}</span>
         </span>
       )}
     </Link>

@@ -14,6 +14,7 @@ PERMISSIONS = [
     ("inquiries.view", "عرض الاستفسارات", "الاستفسارات"),
     ("inquiries.edit", "إضافة وتعديل وحذف الاستفسارات وتعليمها «تم الرفع»", "الاستفسارات"),
     ("inquiries.export", "تصدير الاستفسارات (Excel / PDF)", "الاستفسارات"),
+    ("guide.view", "عرض دليل القسم", "دليل القسم"),
 ]
 PERMISSION_KEYS = [key for key, _, _ in PERMISSIONS]
 
@@ -21,7 +22,7 @@ PERMISSION_KEYS = [key for key, _, _ in PERMISSIONS]
 ROLE_DEFAULTS = {
     "admin": PERMISSION_KEYS,
     "editor": PERMISSION_KEYS,
-    "viewer": ["search.view", "water.view"],
+    "viewer": ["search.view", "water.view", "guide.view"],
 }
 
 

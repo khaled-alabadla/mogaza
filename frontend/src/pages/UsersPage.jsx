@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AddButton, DeleteButton, EditButton } from '../components/ActionButtons'
+import { AddButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from '../components/EmptyState'
 import Field, { controlClass } from '../components/Field'
 import FormActions from '../components/FormActions'
 import FormAlert from '../components/FormAlert'
+import { EditIcon, LockIcon, RestoreIcon, TrashIcon } from '../components/Icons'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
 import Pagination from '../components/Pagination'
@@ -19,9 +20,15 @@ import usePagedList from '../hooks/usePagedList'
 import { authApi, usersApi } from '../services/api'
 import { parseApiError } from '../utils/errors'
 import { displayName, formatDateTime, ROLE_LABELS } from '../utils/format'
+import { useText } from '../context/ContentContext'
 
 const PAGE_SIZE = 20
-const ROLE_TONES = { admin: 'bg-gold-100 text-gold-700', editor: 'bg-brand-50 text-brand-700', viewer: 'bg-gray-100 text-muted' }
+const ROLE_TONES = {
+  admin: 'bg-gold-100 text-gold-700 ring-1 ring-gold-400/40',
+  editor: 'bg-brand-50 text-brand-700 ring-1 ring-brand-100',
+  viewer: 'bg-gray-100 text-muted ring-1 ring-line',
+}
+const AVATAR_TONES = { admin: 'bg-brand-800 text-gold-400', editor: 'bg-brand-100 text-brand-700', viewer: 'bg-gray-100 text-muted' }
 
 /** 'complaints.edit' → 'complaints' (the section a key belongs to). */
 const sectionOf = (key) => key.split('.')[0]
@@ -260,11 +267,12 @@ export default function UsersPage() {
     }
   }
 
+  const pageSubtitle = useText('users.subtitle')
   const deletion = useConfirmAction((u) => usersApi.remove(u.id), { success: 'تم حذف المستخدم.', onDone: reload })
 
   return (
     <div>
-      <PageHeader title="إدارة المستخدمين">
+      <PageHeader title="إدارة المستخدمين" subtitle={pageSubtitle}>
         <AddButton onClick={() => setEditing({ user: null })}>مستخدم جديد</AddButton>
       </PageHeader>
       <SearchInput
@@ -285,29 +293,36 @@ export default function UsersPage() {
         empty={<EmptyState title="لا يوجد مستخدمون مطابقون" />}
       >
         <div className="card overflow-hidden">
+          {/* column titles (wide screens) */}
+          <div className="hidden grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,1fr)_7.5rem] gap-4 border-b border-line bg-canvas px-5 py-2.5 text-xs font-bold text-muted lg:grid">
+            <span>المستخدم</span>
+            <span>الدور والصلاحيات</span>
+            <span>آخر دخول</span>
+            <span className="text-end">إجراءات</span>
+          </div>
           <ul className="divide-y divide-line">
             {data.results.map((u) => (
-                <li key={u.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <li
+                key={u.id}
+                className={`grid gap-3 px-5 py-4 transition-colors hover:bg-canvas/60 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)_minmax(0,1fr)_7.5rem] lg:items-center lg:gap-4 ${
+                  u.is_active ? '' : 'opacity-70'
+                }`}
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <span
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-bold ${AVATAR_TONES[u.role] || AVATAR_TONES.viewer}`}
+                    aria-hidden="true"
+                  >
+                    {displayName(u).trim().charAt(0).toUpperCase()}
+                  </span>
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-ink">{displayName(u)}</span>
-                      <span className="num text-sm text-muted">@{u.username}</span>
-                      <span className={`badge ${ROLE_TONES[u.role] || ROLE_TONES.viewer}`}>{ROLE_LABELS[u.role]}</span>
-                      {hasCustomPermissions(u, catalog) && (
-                        <span
-                          className="badge bg-canvas text-ink"
-                          title={(catalog?.permissions || [])
-                            .filter((p) => (u.permissions || []).includes(p.key))
-                            .map((p) => `${p.group}: ${p.label}`)
-                            .join('، ')}
-                        >
-                          صلاحيات مخصّصة (<span className="num">{(u.permissions || []).length}</span>)
-                        </span>
-                      )}
-                      {!u.is_active && <span className="badge bg-danger-50 text-danger-700">معطّل</span>}
+                      <span className="truncate font-bold text-ink">{displayName(u)}</span>
+                      {u.id === me?.id && <span className="badge bg-brand-50 text-brand-700 ring-1 ring-brand-100">حسابك</span>}
+                      {!u.is_active && <span className="badge bg-danger-50 text-danger-700 ring-1 ring-danger-100">معطّل</span>}
                     </div>
-                    <div className="mt-1 text-xs text-muted">
-                      آخر دخول: <span className="tabular-nums">{formatDateTime(u.last_login)}</span>
+                    <div className="mt-0.5 truncate text-xs text-muted">
+                      <span className="num">@{u.username}</span>
                       {u.email && (
                         <>
                           {' · '}
@@ -316,20 +331,47 @@ export default function UsersPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
-                    <EditButton onClick={() => setEditing({ user: u })} />
-                    {u.id === me?.id ? (
-                      <span className="badge self-center bg-canvas px-3 py-1 font-medium text-muted">حسابك</span>
-                    ) : (
-                      <>
-                        <button type="button" className="btn btn-secondary" onClick={() => toggleActive(u)}>
-                          {u.is_active ? 'تعطيل' : 'تفعيل'}
-                        </button>
-                        <DeleteButton onClick={() => deletion.ask(u)} />
-                      </>
-                    )}
-                  </div>
-                </li>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className={`badge ${ROLE_TONES[u.role] || ROLE_TONES.viewer}`}>{ROLE_LABELS[u.role]}</span>
+                  {hasCustomPermissions(u, catalog) && (
+                    <span
+                      className="badge bg-white text-ink ring-1 ring-line"
+                      title={(catalog?.permissions || [])
+                        .filter((p) => (u.permissions || []).includes(p.key))
+                        .map((p) => `${p.group}: ${p.label}`)
+                        .join('، ')}
+                    >
+                      صلاحيات مخصّصة (<span className="num">{(u.permissions || []).length}</span>)
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm text-muted">
+                  <span className="lg:hidden">آخر دخول: </span>
+                  <span className="tabular-nums">{formatDateTime(u.last_login)}</span>
+                </div>
+                <div className="flex gap-0.5 lg:justify-end">
+                  <button type="button" className="icon-action" aria-label="تعديل" title="تعديل" onClick={() => setEditing({ user: u })}>
+                    <EditIcon className="h-[1.1rem] w-[1.1rem]" />
+                  </button>
+                  {u.id !== me?.id && (
+                    <>
+                      <button
+                        type="button"
+                        className="icon-action"
+                        aria-label={u.is_active ? 'تعطيل' : 'تفعيل'}
+                        title={u.is_active ? 'تعطيل الحساب' : 'تفعيل الحساب'}
+                        onClick={() => toggleActive(u)}
+                      >
+                        {u.is_active ? <LockIcon className="h-[1.1rem] w-[1.1rem]" /> : <RestoreIcon className="h-[1.1rem] w-[1.1rem]" />}
+                      </button>
+                      <button type="button" className="icon-action icon-action-danger" aria-label="حذف" title="حذف" onClick={() => deletion.ask(u)}>
+                        <TrashIcon className="h-[1.1rem] w-[1.1rem]" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </li>
             ))}
           </ul>
         </div>

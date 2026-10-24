@@ -4,6 +4,7 @@ import logo from '../assets/logo-88.webp'
 import { MenuIcon } from './Icons'
 import Tricolor from './Tricolor'
 import UserMenu from './UserMenu'
+import { useText } from '../context/ContentContext'
 
 /** The section / page the visitor is on («الشكاوى والاستفسارات › الاستفسارات»), from the sidebar sections. */
 function useCurrentPage(sections) {
@@ -21,6 +22,8 @@ function useCurrentPage(sections) {
  */
 const Topbar = forwardRef(function Topbar({ sections, hasNav, drawerOpen, onOpenDrawer }, menuButtonRef) {
   const current = useCurrentPage(sections)
+  const brandName = useText('brand.name')
+  const brandOrg = useText('brand.org')
 
   return (
     <header className="sticky top-0 z-30 border-b border-line bg-white/95 shadow-[0_1px_0_rgb(0_0_0/0.02)] backdrop-blur print:hidden">
@@ -49,8 +52,8 @@ const Topbar = forwardRef(function Topbar({ sections, hasNav, drawerOpen, onOpen
         >
           <img src={logo} alt="شعار بلدية غزة" className="h-10 w-auto shrink-0" width="22" height="40" decoding="async" />
           <span className="min-w-0 leading-tight">
-            <span className="block truncate text-[0.95rem] font-bold text-ink">قسم المعلومات والشكاوي</span>
-            <span className="block text-xs text-muted">بلدية غزة</span>
+            <span className="block truncate text-[0.95rem] font-bold text-ink">{brandName}</span>
+            <span className="block text-xs text-muted">{brandOrg}</span>
           </span>
         </Link>
 

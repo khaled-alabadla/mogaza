@@ -323,7 +323,7 @@ class UserPermissionTests(APITestCase):
     def test_role_defaults(self):
         self.assertEqual(self.admin.effective_permissions, PERMISSION_KEYS)
         self.assertEqual(self.editor.effective_permissions, PERMISSION_KEYS)
-        self.assertEqual(self.viewer.effective_permissions, ["search.view", "water.view"])
+        self.assertEqual(self.viewer.effective_permissions, ["search.view", "water.view", "guide.view"])
         self.assertTrue(self.editor.can_edit_locations)
         self.assertFalse(self.viewer.can_edit_locations)
         self.editor.is_active = False
@@ -360,12 +360,12 @@ class UserPermissionTests(APITestCase):
         self.assertEqual(res.data["permissions"][0],
                          {"key": "search.view", "label": "عرض البحث عن المواقع", "group": "البحث عن المواقع"})
         self.assertEqual(res.data["role_defaults"], {"admin": PERMISSION_KEYS, "editor": PERMISSION_KEYS,
-                                                     "viewer": ["search.view", "water.view"]})
+                                                     "viewer": ["search.view", "water.view", "guide.view"]})
 
     def test_admin_sets_and_resets_permissions(self):
         self.client.force_authenticate(self.admin)
         url = f"/api/users/{self.viewer.pk}/"
-        self.assertEqual(self.client.get(url).data["permissions"], ["search.view", "water.view"])
+        self.assertEqual(self.client.get(url).data["permissions"], ["search.view", "water.view", "guide.view"])
         self.assertTrue(self.client.get(url).data["uses_role_defaults"])
         res = self.client.patch(url, {"permissions": ["inquiries.edit", "inquiries.view", "inquiries.view"]},
                                 format="json")
@@ -380,7 +380,7 @@ class UserPermissionTests(APITestCase):
         self.assertEqual(self.client.patch(url, {"permissions": []}, format="json").data["permissions"], [])
         # null = back to the role's defaults
         res = self.client.patch(url, {"permissions": None}, format="json")
-        self.assertEqual(res.data["permissions"], ["search.view", "water.view"])
+        self.assertEqual(res.data["permissions"], ["search.view", "water.view", "guide.view"])
         self.viewer.refresh_from_db()
         self.assertIsNone(self.viewer.permissions)
         # on create too

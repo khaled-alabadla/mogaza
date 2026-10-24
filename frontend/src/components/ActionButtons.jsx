@@ -26,19 +26,27 @@ export const DeleteButton = ({ onClick }) => (
   </IconButton>
 )
 
-/** Footer of a location / street card: edit + delete, or restore in the deleted view. */
+function IconAction({ label, icon: Icon, danger, onClick }) {
+  return (
+    <button type="button" className={`icon-action ${danger ? 'icon-action-danger' : ''}`} onClick={onClick} aria-label={label} title={label}>
+      <Icon className="h-[1.1rem] w-[1.1rem]" />
+    </button>
+  )
+}
+
+/** The compact actions of a location / street card: edit + delete, or restore in the deleted view. */
 export function RecordCardActions({ record, canEdit, deletedView, canRestore, onEdit, onDelete, onRestore }) {
   if (deletedView ? !canRestore : !canEdit) return null
   return (
-    <div className="mt-4 flex justify-end gap-2 border-t border-line pt-3">
+    <div className="flex shrink-0 gap-0.5 print:hidden">
       {deletedView ? (
         <IconButton variant="btn-secondary" icon={RestoreIcon} onClick={() => onRestore(record)}>
           استعادة
         </IconButton>
       ) : (
         <>
-          <EditButton onClick={() => onEdit(record)} />
-          <DeleteButton onClick={() => onDelete(record)} />
+          <IconAction label="تعديل" icon={EditIcon} onClick={() => onEdit(record)} />
+          <IconAction label="حذف" icon={TrashIcon} danger onClick={() => onDelete(record)} />
         </>
       )}
     </div>

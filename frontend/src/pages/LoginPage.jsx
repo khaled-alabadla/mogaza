@@ -11,6 +11,7 @@ import LoadingState from '../components/LoadingState'
 import Tricolor from '../components/Tricolor'
 import { useAuth } from '../context/AuthContext'
 import useFormSubmit from '../hooks/useFormSubmit'
+import { useText } from '../context/ContentContext'
 
 function Ornament() {
   return (
@@ -34,6 +35,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const { errors, formError, saving: submitting, submit } = useFormSubmit('تعذر تسجيل الدخول.')
   const [showPassword, setShowPassword] = useState(false)
+  const quote1 = useText('login.quote1')
+  const quote2 = useText('login.quote2')
+  const welcome = useText('login.welcome')
+  const subtitle = useText('login.subtitle')
 
   const from = location.state?.from?.pathname || '/'
 
@@ -73,11 +78,11 @@ export default function LoginPage() {
 
           <figure className="mt-8 lg:mt-12">
             <blockquote className="font-ruqaa leading-tight" lang="ar">
-              <p className="quote-reveal text-5xl text-white drop-shadow-sm sm:text-6xl lg:text-7xl">أثرٌ جميل</p>
+              <p className="quote-reveal text-5xl text-white drop-shadow-sm sm:text-6xl lg:text-7xl">{quote1}</p>
               <div className="quote-reveal my-3 lg:my-5">
                 <Ornament />
               </div>
-              <p className="quote-reveal-late text-4xl text-gold-400 sm:text-5xl lg:text-6xl">قبل الرحيل</p>
+              <p className="quote-reveal-late text-4xl text-gold-400 sm:text-5xl lg:text-6xl">{quote2}</p>
             </blockquote>
           </figure>
         </div>
@@ -93,8 +98,8 @@ export default function LoginPage() {
 
         <div className="relative w-full max-w-md">
           <div className="mb-7 text-center">
-            <h1 className="text-3xl font-bold text-ink">مرحباً بك</h1>
-            <p className="mt-2 text-sm text-muted">سجّل الدخول للوصول إلى قسم المعلومات والشكاوي</p>
+            <h1 className="text-3xl font-bold text-ink">{welcome}</h1>
+            <p className="mt-2 text-sm text-muted">{subtitle}</p>
           </div>
 
           <form

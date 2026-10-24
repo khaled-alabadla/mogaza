@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { CloseIcon } from './Icons'
+import Tricolor from './Tricolor'
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
@@ -58,15 +59,16 @@ export default function Modal({ open, title, onClose, children, size = 'md' }) {
 
   // Portal to <body> so an ancestor (e.g. the blurred sticky header) can't trap the fixed overlay.
   return createPortal(
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
+    <div className="modal-backdrop fixed inset-0 z-40 flex items-end justify-center bg-brand-800/30 p-0 backdrop-blur-[2px] sm:items-center sm:p-4">
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className={`relative max-h-[92dvh] w-full ${WIDTHS[size]} overflow-y-auto overscroll-contain rounded-t-2xl bg-white shadow-xl sm:rounded-2xl`}
+        className={`modal-panel relative max-h-[92dvh] w-full ${WIDTHS[size]} overflow-y-auto overscroll-contain rounded-t-2xl bg-white shadow-2xl ring-1 ring-black/5 sm:rounded-2xl`}
       >
+        <Tricolor className="sticky top-0 z-10 flex h-1" />
         <div className="flex items-center justify-between gap-3 border-b border-line py-3 ps-5 pe-3">
           <h2 id={titleId} className="text-lg font-bold text-ink">
             {title}

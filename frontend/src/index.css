@@ -66,16 +66,23 @@
   }
   /* use together with .btn, e.g. className="btn btn-primary" */
   .btn-primary {
-    @apply bg-brand-600 text-white hover:bg-brand-700;
+    @apply bg-brand-600 text-white shadow-[0_1px_2px_rgb(6_70_42/0.25),inset_0_1px_0_rgb(255_255_255/0.12)] hover:bg-brand-700;
   }
   .btn-secondary {
-    @apply border-line bg-white text-ink hover:border-gray-300 hover:bg-gray-50;
+    @apply border-line bg-white text-ink shadow-[0_1px_2px_rgb(16_24_40/0.05)] hover:border-gray-300 hover:bg-gray-50;
   }
   .btn-danger {
     @apply bg-danger-600 text-white hover:bg-danger-700;
   }
   .btn-ghost-danger {
     @apply border-danger-100 bg-white text-danger-700 hover:border-danger-600/30 hover:bg-danger-50;
+  }
+  /* Compact icon-only action on a record (edit / delete / restore); its name is in aria-label + title */
+  .icon-action {
+    @apply tap inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-muted transition-colors hover:border-line hover:bg-white hover:text-brand-700;
+  }
+  .icon-action-danger {
+    @apply hover:border-danger-100 hover:bg-danger-50 hover:text-danger-700;
   }
   /* Square icon-only button (dialog / toast close) */
   .icon-btn {
@@ -95,8 +102,9 @@
   .label {
     @apply mb-1.5 block text-sm font-medium text-ink;
   }
+  /* A hairline border plus a barely-there shadow: cards read as raised without looking heavy. */
   .card {
-    @apply rounded-xl border border-line bg-white;
+    @apply rounded-xl border border-line bg-white shadow-[0_1px_2px_rgb(16_24_40/0.04)];
   }
   .field-error {
     @apply mt-1 text-sm text-danger-700;
@@ -144,6 +152,26 @@
 @media (prefers-reduced-motion: reduce) {
   .quote-reveal,
   .quote-reveal-late {
+    animation: none;
+  }
+}
+
+/* Dialogs: fade the backdrop, lift the panel slightly into place. */
+.modal-backdrop {
+  animation: drawer-fade 0.18s ease-out both;
+}
+.modal-panel {
+  animation: modal-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-backdrop,
+  .modal-panel {
     animation: none;
   }
 }

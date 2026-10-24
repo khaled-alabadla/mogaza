@@ -50,6 +50,19 @@ export const authApi = {
   permissions: (signal) => api.get('/auth/permissions/', { signal }).then((r) => r.data),
 }
 
+/** Site texts edited from the developer dashboard: { key: value } (only the edited ones). */
+export const contentApi = {
+  all: () => api.get('/content/').then((r) => r.data),
+  save: (key, value) => api.put(`/dev/content/${key}/`, { value }).then((r) => r.data),
+  reset: (key) => api.delete(`/dev/content/${key}/`),
+}
+
+/** The developer's e-mailed login code («/dashboard»). */
+export const devAuthApi = {
+  requestCode: (email) => api.post('/dev/otp/request/', { email }).then((r) => r.data),
+  verify: (email, code) => api.post('/dev/otp/verify/', { email, code }).then((r) => r.data),
+}
+
 function crud(resource) {
   return {
     list: (params, signal) => api.get(`/${resource}/`, { params, signal }).then((r) => r.data),

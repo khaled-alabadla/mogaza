@@ -6,6 +6,7 @@ from apps.accounts.views import (ChangePasswordView, LoginView, LogoutView, MeVi
                                  UserViewSet)
 from apps.audit.views import AuditLogViewSet
 from apps.complaints.views import ComplaintViewSet
+from apps.devpanel.views import ContentItemView, ContentView, OtpRequestView, OtpVerifyView
 from apps.locations.views import LocationViewSet, StreetNameViewSet
 from apps.water.views import NeighborhoodViewSet, WaterZoneViewSet
 from apps.water.table_api import DistributionGroupViewSet
@@ -26,6 +27,10 @@ urlpatterns = [
     path("api/auth/me/", MeView.as_view(), name="auth-me"),
     path("api/auth/permissions/", PermissionCatalogView.as_view(), name="auth-permissions"),
     path("api/auth/change-password/", ChangePasswordView.as_view(), name="auth-change-password"),
+    path("api/content/", ContentView.as_view(), name="content"),
+    path("api/dev/otp/request/", OtpRequestView.as_view(), name="dev-otp-request"),
+    path("api/dev/otp/verify/", OtpVerifyView.as_view(), name="dev-otp-verify"),
+    path("api/dev/content/<str:key>/", ContentItemView.as_view(), name="dev-content"),
     path("api/", include(router.urls)),
     path("django-admin/", admin.site.urls),
 ]

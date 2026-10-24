@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AddButton, DeleteButton, EditButton } from '../components/ActionButtons'
+import { AddButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from '../components/EmptyState'
-import { CheckIcon, PrintIcon, RestoreIcon, SheetIcon } from '../components/Icons'
+import { CheckIcon, EditIcon, PrintIcon, RestoreIcon, SheetIcon, TrashIcon } from '../components/Icons'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
 import Pagination from '../components/Pagination'
 import RecordForm from '../components/RecordForm'
 import { complaintFields } from '../components/recordFields'
 import SearchInput from '../components/SearchInput'
+import Segmented from '../components/Segmented'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import useConfirmAction from '../hooks/useConfirmAction'
@@ -20,10 +21,11 @@ import { complaintsApi, neighborhoodsApi } from '../services/api'
 import { parseApiError } from '../utils/errors'
 import { formatDateTime } from '../utils/format'
 import { filterParams, KINDS, UPLOAD_TABS } from './complaintKinds'
+import { useText } from '../context/ContentContext'
 
 const PAGE_SIZE = 20
 
-const STATUS_TONES = { pending: 'bg-gold-100 text-gold-700', uploaded: 'bg-brand-50 text-brand-700' }
+const STATUS_TONES = { pending: 'bg-gold-100 text-gold-700 ring-1 ring-gold-400/40', uploaded: 'bg-brand-50 text-brand-700 ring-1 ring-brand-100' }
 // Shown in the card header / text block rather than in the details grid
 const OWN_PLACE = new Set(['hide_identity', 'category', 'details'])
 const LTR_FIELDS = new Set(['national_id', 'phone', 'point', 'building_number', 'street_number', 'subscription'])
@@ -50,7 +52,9 @@ function ComplaintCard({ complaint: c, fields, canEdit, selected, onSelect, onTo
   const uploaded = c.status === 'uploaded'
   const details = fields.filter((f) => !OWN_PLACE.has(f.name) && c[f.name])
   return (
-    <li className={`card p-4 transition-colors sm:p-5 ${selected ? 'border-brand-500 ring-2 ring-brand-100' : ''}`}>
+    <li className={`card relative overflow-hidden p-4 transition-shadow hover:shadow-md sm:p-5 ${selected ? 'border-brand-500 ring-2 ring-brand-100' : ''}`}>
+      {/* status edge: gold while waiting, green once uploaded */}
+      <span className={`absolute inset-y-0 start-0 w-1 ${uploaded ? 'bg-brand-500' : 'bg-gold-400'}`} aria-hidden="true" />
       <div className="flex items-start gap-3">
         {canEdit && (
           <label className="tap -m-2 flex shrink-0 cursor-pointer items-start justify-center p-2">
@@ -64,19 +68,33 @@ function ComplaintCard({ complaint: c, fields, canEdit, selected, onSelect, onTo
           </label>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-bold text-ink">{c.category || `${c.kind_display} بدون تصنيف`}</h3>
-            <span className={`badge ${STATUS_TONES[c.status]}`}>{c.status_display}</span>
-            {c.hide_identity && <span className="badge bg-gray-100 text-muted">بيانات صاحب الشكوى مخفية</span>}
+          <div className="flex items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-[1.05rem] font-bold text-ink">{c.category || `${c.kind_display} بدون تصنيف`}</h3>
+                <span className={`badge ${STATUS_TONES[c.status]}`}>{c.status_display}</span>
+                {c.hide_identity && <span className="badge bg-gray-100 text-muted ring-1 ring-line">بيانات صاحب الشكوى مخفية</span>}
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                سُجّل {formatDateTime(c.created_at)}
+                {c.created_by_name && ` بواسطة ${c.created_by_name}`}
+                {uploaded && c.uploaded_at && ` · رُفع ${formatDateTime(c.uploaded_at)}`}
+              </p>
+            </div>
+            {canEdit && (
+              <div className="-mt-1 -me-1 flex shrink-0 gap-0.5">
+                <button type="button" className="icon-action" aria-label="تعديل" title="تعديل" onClick={() => onEdit(c)}>
+                  <EditIcon className="h-[1.1rem] w-[1.1rem]" />
+                </button>
+                <button type="button" className="icon-action icon-action-danger" aria-label="حذف" title="حذف" onClick={() => onDelete(c)}>
+                  <TrashIcon className="h-[1.1rem] w-[1.1rem]" />
+                </button>
+              </div>
+            )}
           </div>
-          <p className="mt-1 text-xs text-muted">
-            سُجّل {formatDateTime(c.created_at)}
-            {c.created_by_name && ` بواسطة ${c.created_by_name}`}
-            {uploaded && c.uploaded_at && ` · رُفع ${formatDateTime(c.uploaded_at)}`}
-          </p>
 
           {details.length > 0 && (
-            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 sm:grid-cols-3 lg:grid-cols-4">
+            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-4">
               {details.map((f) => (
                 // a choice (e.g. «المصدر») shows its Arabic label; «الحي» is stored as its name
                 <Detail
@@ -90,17 +108,19 @@ function ComplaintCard({ complaint: c, fields, canEdit, selected, onSelect, onTo
           )}
 
           {c.details && (
-            <p className="mt-3 rounded-lg bg-canvas px-3 py-2.5 text-sm whitespace-pre-line text-ink">{c.details}</p>
+            <p className="mt-3 border-s-2 border-gold-400 ps-3 text-sm leading-7 whitespace-pre-line text-ink">{c.details}</p>
           )}
 
           {canEdit && (
-            <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-line pt-3">
-              <button type="button" className="btn btn-secondary" onClick={() => onToggleUploaded([c.id], !uploaded)}>
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                className={`btn py-2 ${uploaded ? 'btn-secondary' : 'border-brand-100 bg-brand-50 text-brand-700 hover:bg-brand-100'}`}
+                onClick={() => onToggleUploaded([c.id], !uploaded)}
+              >
                 {uploaded ? <RestoreIcon className="h-4 w-4" /> : <CheckIcon className="h-4 w-4" />}
                 {uploaded ? 'إرجاع إلى بانتظار الرفع' : 'تم الرفع'}
               </button>
-              <EditButton onClick={() => onEdit(c)} />
-              <DeleteButton onClick={() => onDelete(c)} />
             </div>
           )}
         </div>
@@ -119,6 +139,8 @@ export function ComplaintsLog({ kind }) {
   const k = KINDS[kind]
   const canEdit = can(`${k.perm}.edit`)
   const canExport = can(`${k.perm}.export`)
+  const pageTitle = useText(`${k.perm}.title`) || k.title
+  const pageSubtitle = useText(`${k.perm}.subtitle`)
   const [tab, setTab] = useState('pending')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -208,7 +230,7 @@ export function ComplaintsLog({ kind }) {
 
   return (
     <div>
-      <PageHeader title={k.title} subtitle={k.subtitle}>
+      <PageHeader title={pageTitle} subtitle={pageSubtitle}>
         {canExport && (
           <>
             <a className="btn btn-secondary" href={exportHref}>
@@ -223,25 +245,13 @@ export function ComplaintsLog({ kind }) {
       </PageHeader>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="inline-flex shrink-0 self-start rounded-xl border border-line bg-white p-1" role="tablist" aria-label="حالة الرفع">
-          {UPLOAD_TABS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              role="tab"
-              aria-selected={tab === t.value}
-              onClick={() => changeFilter(setTab)(t.value)}
-              className={`tap flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors ${
-                tab === t.value ? 'bg-gold-100 text-gold-700' : 'text-muted hover:text-ink'
-              }`}
-            >
-              {t.label}
-              {t.value === 'pending' && data.pending_count > 0 && (
-                <span className="num rounded-full bg-gold-400 px-1.5 text-xs text-ink">{data.pending_count}</span>
-              )}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          className="shrink-0 self-start"
+          label="حالة الرفع"
+          value={tab}
+          onChange={(value) => changeFilter(setTab)(value)}
+          options={UPLOAD_TABS.map((t) => ({ ...t, badge: t.value === 'pending' ? data.pending_count : 0 }))}
+        />
         <SearchInput
           className="flex-1"
           label={k.searchLabel}
@@ -252,7 +262,11 @@ export function ComplaintsLog({ kind }) {
       </div>
 
       {canEdit && data.results.length > 0 && (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-2.5">
+        <div
+          className={`mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-2.5 transition-colors ${
+            selected.size ? 'border-brand-500/40 bg-brand-50' : 'border-line bg-white'
+          }`}
+        >
           <label className="tap flex cursor-pointer items-center gap-2 text-sm text-ink">
             <input
               type="checkbox"
@@ -293,7 +307,7 @@ export function ComplaintsLog({ kind }) {
           />
         }
       >
-        <ul className="space-y-3">
+        <ul className="space-y-2.5">
           {data.results.map((c) => (
             <ComplaintCard
               key={c.id}

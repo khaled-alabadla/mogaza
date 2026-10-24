@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination'
 import RecordForm from '../components/RecordForm'
 import { LOCATION_FIELDS, STREET_FIELDS, withNeighborhoodOptions } from '../components/recordFields'
 import SearchBar from '../components/SearchBar'
+import Segmented from '../components/Segmented'
 import StreetCard from '../components/StreetCard'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -18,6 +19,7 @@ import useDebouncedValue from '../hooks/useDebouncedValue'
 import usePagedList from '../hooks/usePagedList'
 import { locationsApi, neighborhoodsApi, streetsApi } from '../services/api'
 import { parseApiError } from '../utils/errors'
+import { useText } from '../context/ContentContext'
 
 const PAGE_SIZE = 20
 
@@ -146,6 +148,8 @@ export default function DashboardPage() {
     }
   }
 
+  const searchTitle = useText('search.title')
+  const searchSubtitle = useText('search.subtitle')
   const heading = deletedView ? scope.deletedLabel : query ? 'نتائج البحث' : scope.allLabel
   const Card = scopeKey === 'streets' ? StreetCard : LocationCard
   const openAdd = () => setFormState({ record: null })
@@ -153,38 +157,33 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <section className="mx-auto max-w-3xl text-center">
-        <h1 className="text-2xl font-bold text-ink sm:text-3xl">ابحث عن اسم مكان أو تقاطع</h1>
-        <p className="mt-2 text-sm text-muted sm:text-base">يمكنك كتابة جزء من الاسم أو الوصف أو رقم المبنى أو الشارع</p>
-        <div className="mt-5">
-          <SearchBar value={input} onChange={setInput} placeholder={scope.placeholder} />
-        </div>
-        <div className="mt-3 inline-flex rounded-xl border border-line bg-white p-1" role="tablist" aria-label="نوع البحث">
-          {Object.entries(SCOPES).map(([key, s]) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={scopeKey === key}
-              onClick={() => updateParams({ scope: key === 'locations' ? null : key, page: null })}
-              className={`tap rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-                scopeKey === key ? 'bg-brand-600 text-white' : 'text-muted hover:bg-canvas hover:text-ink'
-              }`}
-            >
-              {s.tab}
-            </button>
-          ))}
+      {/* The search area: light, with the login page's faint diamonds behind it */}
+      <section className="relative overflow-hidden rounded-2xl border border-line bg-white px-5 py-8 text-center sm:px-10 sm:py-10">
+        <div className="harlequin-soft" aria-hidden="true" />
+        <div className="relative mx-auto max-w-2xl">
+          <h1 className="text-2xl font-bold text-ink sm:text-[1.75rem]">{searchTitle}</h1>
+          <p className="mt-2 text-sm text-muted">{searchSubtitle}</p>
+          <div className="mt-6">
+            <SearchBar value={input} onChange={setInput} placeholder={scope.placeholder} />
+          </div>
+          <Segmented
+            className="mt-4"
+            label="نوع البحث"
+            value={scopeKey}
+            onChange={(key) => updateParams({ scope: key === 'locations' ? null : key, page: null })}
+            options={Object.entries(SCOPES).map(([key, s]) => ({ value: key, label: s.tab }))}
+          />
         </div>
       </section>
 
       <section className="mt-8">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           {/* Only the heading + count is announced when results change (not every card). */}
-          <h2 className="text-lg font-bold text-ink" aria-live="polite">
+          <h2 className="flex items-center gap-2.5 text-lg font-bold text-ink" aria-live="polite">
             {heading}
             {/* kept in place (hidden) while loading so the heading doesn't jump */}
             <span
-              className={`badge ms-2 bg-brand-50 align-middle text-sm text-brand-700 ${loading || error ? 'invisible' : ''}`}
+              className={`badge bg-brand-50 text-sm text-brand-700 ring-1 ring-brand-100 ${loading || error ? 'invisible' : ''}`}
             >
               <span className="num">{data.count}</span>
             </span>
@@ -219,7 +218,7 @@ export default function DashboardPage() {
             />
           }
         >
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {data.results.map((record) => (
               <Card
                 key={record.id}

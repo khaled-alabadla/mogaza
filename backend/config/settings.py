@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "apps.water",
     "apps.complaints",
     "apps.audit",
+    "apps.devpanel",
 ]
 
 MIDDLEWARE = [
@@ -146,6 +147,24 @@ AUTH_PASSWORD_VALIDATORS = [
 
 AUTHENTICATION_BACKENDS = ["apps.accounts.backends.UsernameBackend"]
 
+# The developer dashboard («/dashboard») is opened with a one-time code sent to this address only.
+DEVELOPER_EMAIL = env("DEVELOPER_EMAIL", "bilalqanoa@gmail.com")
+
+# Outgoing mail (the dashboard codes). With EMAIL_HOST_USER unset (local development) messages are
+# printed to the server console instead. For Gmail: EMAIL_HOST_USER = the Gmail address and
+# EMAIL_HOST_PASSWORD = a Google «App password» (not the account password).
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
+if EMAIL_HOST_USER:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+    EMAIL_HOST = env("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(env("EMAIL_PORT", "587"))
+    EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+    EMAIL_TIMEOUT = 15
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "noreply@localhost")
+
 LANGUAGE_CODE = "ar"
 TIME_ZONE = env("DJANGO_TIME_ZONE", "Asia/Gaza")
 USE_I18N = True
@@ -172,7 +191,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "config.pagination.StandardPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
-    "DEFAULT_THROTTLE_RATES": {"login": env("LOGIN_THROTTLE_RATE", "10/min")},
+    "DEFAULT_THROTTLE_RATES": {"login": env("LOGIN_THROTTLE_RATE", "10/min"), "otp": env("OTP_THROTTLE_RATE", "10/hour")},
     # Reverse proxies in front of Django that append to X-Forwarded-For. With the default 0 the login throttle
     # keys on REMOTE_ADDR only; left unset, DRF would trust a client-supplied X-Forwarded-For header and an
     # attacker could bypass the limit by sending a new value with every attempt.

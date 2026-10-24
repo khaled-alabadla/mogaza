@@ -13,6 +13,7 @@ export const PERMISSIONS = [
   'inquiries.view',
   'inquiries.edit',
   'inquiries.export',
+  'guide.view',
 ]
 
 /** What an anonymous visitor may open when the server enables public search. */
