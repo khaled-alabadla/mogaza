@@ -174,8 +174,8 @@ function Stage({ stage, number, last, open, onToggle, onNavigate }) {
   )
 }
 
-/** Short sections open fully; a long one (e.g. «إضافة شكوى») starts as a list of its stages. */
-const initiallyOpen = (stages) => (stages.length <= 2 ? stages.map((s) => s.id) : [])
+/** Every section starts folded: just the list of its stages. */
+const initiallyOpen = () => []
 
 /** «دليل القسم»: the department's work guide, with each tracking-system page one click away. */
 export default function GuidePage() {
@@ -187,14 +187,14 @@ export default function GuidePage() {
   const subtitle = useText('guide.subtitle')
   const section = sections.find((s) => s.id === searchParams.get('tab')) || sections[0]
   const stages = Array.isArray(section.stages) ? section.stages.filter((s) => s?.id && Array.isArray(s.blocks)) : []
-  const [open, setOpen] = useState(() => new Set(initiallyOpen(stages)))
+  const [open, setOpen] = useState(() => new Set(initiallyOpen()))
   const scrollTo = useRef(null)
 
   // switching section: reset which stages are open (or open the one a link asked for)
   const [shownId, setShownId] = useState(section.id)
   if (shownId !== section.id) {
     setShownId(section.id)
-    setOpen(new Set(scrollTo.current ? [scrollTo.current] : initiallyOpen(stages)))
+    setOpen(new Set(scrollTo.current ? [scrollTo.current] : initiallyOpen()))
   }
 
   useEffect(() => {
@@ -233,7 +233,7 @@ export default function GuidePage() {
 
           {stages.length > 0 && (
             <div className="card overflow-hidden">
-              {stages.length > 2 && (
+              {stages.length > 0 && (
                 <div className="flex items-center justify-between gap-3 border-b border-line bg-canvas/60 px-4 py-2.5 sm:px-5">
                   <p className="text-sm text-muted">
                     <span className="num font-semibold text-ink">{stages.length}</span> مراحل

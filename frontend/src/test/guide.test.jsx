@@ -41,10 +41,13 @@ describe('GuidePage («دليل القسم»)', () => {
     expect(screen.getByRole('button', { name: 'طي الكل' })).toBeInTheDocument()
   })
 
-  it('switches between the sections (short ones open fully)', async () => {
+  it('switches between the sections (each starts folded)', async () => {
     renderAt()
     await userEvent.click(screen.getByRole('tab', { name: 'البحث عن شكوى' }))
     expect(openButton()).toHaveAttribute('href', 'https://tracking.mogaza.org/wf/search')
+    // every section starts folded
+    expect(screen.queryByText('خطوات البحث')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'فتح الكل' }))
     expect(screen.getByText('خطوات البحث')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('tab', { name: 'التعامل مع المواطن' }))
     expect(screen.queryByRole('link', { name: 'فتح الصفحة' })).not.toBeInTheDocument() // no system page
@@ -60,6 +63,7 @@ describe('GuidePage («دليل القسم»)', () => {
 
   it('a link inside a stage opens another section', async () => {
     renderAt('/guide?tab=add-inquiry')
+    await userEvent.click(screen.getByRole('button', { name: 'فتح الكل' }))
     await userEvent.click(screen.getByRole('button', { name: /خطوات البحث عن الشكوى/ }))
     expect(screen.getByRole('tab', { name: 'البحث عن شكوى' })).toHaveAttribute('aria-selected', 'true')
   })
@@ -89,7 +93,8 @@ describe('GuidePage («دليل القسم»)', () => {
     )
     expect(await screen.findByRole('heading', { name: 'دليل جديد' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'قسم مُعدَّل' })).toBeInTheDocument()
-    expect(screen.getByText('نص مُعدَّل')).toBeInTheDocument() // a short section opens; the unknown block is skipped
+    await userEvent.click(screen.getByRole('button', { name: /مرحلة/ }))
+    expect(screen.getByText('نص مُعدَّل')).toBeInTheDocument() // the unknown block is skipped
     all.mockRestore()
   })
 

@@ -20,6 +20,9 @@ class HiddenSuperuserAuditTests(APITestCase):
         root_client.patch(f"/api/users/{self.root.pk}/", {"first_name": "مطور"})            # change to root itself
         root_client.post("/api/auth/logout/")
         APIClient().post("/api/auth/login/", {"username": "ROOT", "password": "wrong"})       # failed, as typed
+        # more failed logins (added directly: the login endpoint is rate-limited)
+        for typed in ("rooot", "root@example.com", "mohammed"):  # mistyped, the e-mail, someone else
+            AuditLog.objects.create(action=AuditLog.Action.LOGIN_FAILED, username=typed)
         admin_client.post("/api/auth/login/", {"username": "admin1", "password": PASSWORD})
         admin_client.post("/api/locations/", {"place_name": "موقع أضافه المدير"})
 
@@ -34,6 +37,8 @@ class HiddenSuperuserAuditTests(APITestCase):
                          entries)
         self.assertIn(("CREATE", "admin1", "موقع أضافه المدير"), entries)
         self.assertIn(("LOGIN", "admin1", ""), entries)
+        self.assertIn(("LOGIN_FAILED", "mohammed", ""), entries)  # other people's failed logins stay
+        self.assertFalse([e for e in entries if e[1] in ("rooot", "root@example.com")], entries)
         # filtering / searching / opening an entry directly does not reveal it either
         self.client.force_authenticate(self.admin)
         self.assertEqual(self.client.get(URL, {"user": "root"}).data["count"], 0)
