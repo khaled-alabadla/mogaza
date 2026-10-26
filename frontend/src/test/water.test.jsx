@@ -31,7 +31,7 @@ const TABLE = {
   ],
 }
 
-const renderPage = (url = '/water') =>
+const renderPage = (url = '/water?by=schedule') =>
   render(
     <MemoryRouter initialEntries={[url]}>
       <WaterSchedulePage />
@@ -110,29 +110,96 @@ describe('WaterSchedulePage', () => {
     expect(within(rowOf('السبت / الثلاثاء')).getByLabelText('الآبار المحلية')).toBeInTheDocument()
   })
 
-  it('the source tabs show only the areas fed by that source', async () => {
+  it('the source list shows only the areas fed by that source', async () => {
     renderPage()
     await screen.findByText('الدرج')
-    await userEvent.click(screen.getByRole('tab', { name: 'خط ماكروت' }))
+    await userEvent.selectOptions(screen.getByLabelText('مصدر المياه'), 'mekorot')
     expect(screen.getByRole('heading', { name: 'جدول مياه خط ماكروت' })).toBeInTheDocument()
     expect(screen.getByText('النديم')).toBeInTheDocument()
     expect(screen.getByText('الدرج')).toBeInTheDocument()
     expect(screen.queryByText('عين جالوت')).not.toBeInTheDocument()
     expect(screen.queryByText('مدرسة موسى بن نصير')).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole('tab', { name: 'الآبار المحلية' }))
+    await userEvent.selectOptions(screen.getByLabelText('مصدر المياه'), 'wells')
     expect(screen.getByText('عين جالوت')).toBeInTheDocument()
     expect(screen.queryByText('الاثنين / الجمعة')).not.toBeInTheDocument() // a row with no wells areas is hidden
   })
 
   it('opens on a source tab from its link and edits the whole row', async () => {
-    renderPage('/water?source=wells')
+    renderPage('/water?by=schedule&source=wells')
     await screen.findByText('عين جالوت')
-    expect(screen.getByRole('tab', { name: 'الآبار المحلية' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByLabelText('مصدر المياه')).toHaveValue('wells')
     await userEvent.click(screen.getByRole('button', { name: /تعديل/ }))
     // the form gets every area of the row, not only the filtered ones
     expect(screen.getByLabelText('خط ماكروت')).toHaveValue('النديم')
     expect(screen.getByLabelText('الآبار المحلية')).toHaveValue('عين جالوت')
+  })
+
+  it('«حسب الأيام» gathers every area of each weekday, today first', async () => {
+    renderPage('/water') // the default view
+    await screen.findAllByText('الدرج')
+    expect(screen.getByLabelText('طريقة العرض')).toHaveValue('')
+    const day = (name) => screen.getByRole('region', { name })
+    // row 1 = Saturday + Tuesday, row 2 = Monday + Friday
+    expect(within(day('السبت')).getByText('النديم')).toBeInTheDocument()
+    expect(within(day('الثلاثاء')).getByText('عين جالوت')).toBeInTheDocument()
+    expect(within(day('الجمعة')).getByText('الدرج')).toBeInTheDocument()
+    expect(within(day('الأحد')).getByText('لا توجد مواعيد في هذا اليوم.')).toBeInTheDocument()
+    expect(within(day('الاثنين')).getByText('تصل المياه اليوم')).toBeInTheDocument() // today = Monday (2)
+    // today first, then the coming days in order
+    const days = screen.getAllByRole('region').map((el) => el.getAttribute('aria-label'))
+    expect(days).toEqual(['الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'])
+    // today and tomorrow are open, the other days open on demand
+    const toggle = (name) => within(day(name)).getByRole('button')
+    expect(toggle('الاثنين')).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle('الثلاثاء')).toHaveAttribute('aria-expanded', 'true')
+    expect(within(day('الثلاثاء')).getByText('غداً')).toBeInTheDocument()
+    expect(toggle('السبت')).toHaveAttribute('aria-expanded', 'false')
+    await userEvent.click(toggle('السبت'))
+    expect(toggle('السبت')).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('answers «when does water reach …» directly, with the next visit', async () => {
+    renderPage('/water')
+    await screen.findAllByText('الدرج')
+    await userEvent.type(screen.getByLabelText('البحث في جدول المياه'), 'النديم')
+    const answer = within(screen.getByRole('region', { name: 'موعد المياه للمنطقة' }))
+    expect(answer.getByText('النديم')).toBeInTheDocument()
+    expect(answer.getByText('السبت والثلاثاء')).toBeInTheDocument()
+    expect(answer.getByText('الموعد القادم: غداً (الثلاثاء)')).toBeInTheDocument() // today is Monday
+    await userEvent.clear(screen.getByLabelText('البحث في جدول المياه'))
+    await userEvent.type(screen.getByLabelText('البحث في جدول المياه'), 'الدرج')
+    expect(within(screen.getByRole('region', { name: 'موعد المياه للمنطقة' })).getByText('تصل المياه اليوم')).toBeInTheDocument()
+  })
+
+  it('«حسب الأيام» follows the source tab and the search', async () => {
+    renderPage('/water?source=wells')
+    expect(await screen.findAllByText('عين جالوت')).toHaveLength(2) // Saturday and Tuesday
+    expect(screen.queryByText('النديم')).not.toBeInTheDocument() // mekorot area hidden
+    await userEvent.selectOptions(screen.getByLabelText('مصدر المياه'), '')
+    expect(screen.getByLabelText('طريقة العرض')).toHaveValue('') // mode kept
+    await userEvent.type(screen.getByLabelText('البحث في جدول المياه'), 'الجمعة')
+    expect(screen.getByRole('region', { name: 'الجمعة' })).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'السبت' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'موعد المياه للمنطقة' })).not.toBeInTheDocument() // a weekday, not an area
+  })
+
+  it('switches to «حسب المواعيد» from the list', async () => {
+    renderPage('/water')
+    await screen.findAllByText('الدرج')
+    await userEvent.selectOptions(screen.getByLabelText('طريقة العرض'), 'schedule')
+    expect(screen.getByText('السبت / الثلاثاء')).toBeInTheDocument()
+  })
+
+  it('«حسب المواعيد» uses the same open / closed sections: today and tomorrow open', async () => {
+    renderPage()
+    await screen.findByText('الدرج')
+    const toggle = (days) => within(rowOf(days)).getByRole('button', { name: new RegExp(days) })
+    expect(toggle('الاثنين / الجمعة')).toHaveAttribute('aria-expanded', 'true') // today (Monday)
+    expect(within(rowOf('السبت / الثلاثاء')).getByText('غداً')).toBeInTheDocument() // tomorrow (Tuesday)
+    expect(toggle('السبت / الثلاثاء')).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(toggle('السبت / الثلاثاء'))
+    expect(toggle('السبت / الثلاثاء')).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('search keeps only rows with matching addresses', async () => {
@@ -140,7 +207,7 @@ describe('WaterSchedulePage', () => {
     await screen.findByText('الدرج')
     await userEvent.type(screen.getByLabelText('البحث في جدول المياه'), 'موسي')
     expect(screen.queryByText('النديم')).not.toBeInTheDocument()
-    expect(screen.getByText('مدرسة موسى بن نصير')).toBeInTheDocument()
+    expect(screen.getAllByText('مدرسة موسى بن نصير')).toHaveLength(2) // the answer card + the table
   })
 
   it('hides editing controls for viewers', async () => {
@@ -153,7 +220,7 @@ describe('WaterSchedulePage', () => {
 
   it('prints with a formal letterhead for the current view', async () => {
     window.print = vi.fn()
-    renderPage('/water?source=mekorot')
+    renderPage('/water?by=schedule&source=mekorot')
     await screen.findByText('الدرج')
     expect(screen.getByText('بلدية غزة | قسم المعلومات والشكاوي')).toBeInTheDocument()
     expect(screen.getAllByText('جدول مياه خط ماكروت')).toHaveLength(2) // screen heading + printed heading
