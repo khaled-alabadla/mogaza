@@ -9,7 +9,7 @@ from apps.complaints.report_views import DailyReportView
 from apps.complaints.urgent_views import UrgentComplaintViewSet
 from apps.complaints.views import ComplaintViewSet
 from apps.devpanel.views import ContentItemView, ContentView, OtpRequestView, OtpVerifyView
-from apps.locations.views import CommitteeRepViewSet, LocationViewSet, StreetNameViewSet
+from apps.locations.views import CircularViewSet, CommitteeRepViewSet, LocationViewSet, StreetNameViewSet
 from apps.water.views import NeighborhoodViewSet, WaterZoneViewSet
 from apps.water.table_api import DistributionGroupViewSet
 
@@ -17,6 +17,7 @@ router = DefaultRouter()
 router.register("locations", LocationViewSet, basename="location")
 router.register("streets", StreetNameViewSet, basename="street")
 router.register("committees", CommitteeRepViewSet, basename="committee")
+router.register("circulars", CircularViewSet, basename="circular")
 router.register("neighborhoods", NeighborhoodViewSet, basename="neighborhood")
 router.register("water-zones", WaterZoneViewSet, basename="water-zone")
 router.register("water-table", DistributionGroupViewSet, basename="water-table")

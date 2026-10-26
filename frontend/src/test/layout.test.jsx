@@ -43,6 +43,7 @@ describe('visibleLinks', () => {
       '/water',
       '/guide',
       '/committees',
+      '/circulars',
       '/urgent',
       '/complaints',
       '/inquiries',
@@ -56,7 +57,7 @@ describe('visibleLinks', () => {
     const can = (perm) => perm === 'complaints.view'
     expect(paths({ isAuthenticated: true, can })).toEqual(['/complaints'])
     expect(visibleSections(viewer).map((s) => s.title)).toEqual(['الخدمات'])
-    expect(visibleSections({ isAuthenticated: true, isAdmin: true }).map((s) => s.links.length)).toEqual([4, 4, 2])
+    expect(visibleSections({ isAuthenticated: true, isAdmin: true }).map((s) => s.links.length)).toEqual([5, 4, 2])
     expect(firstAllowedPath({ isAuthenticated: true, permissions: ['inquiries.view'] })).toBe('/inquiries')
     expect(firstAllowedPath({ isAuthenticated: true, permissions: [] })).toBeNull()
   })

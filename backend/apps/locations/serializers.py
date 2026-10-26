@@ -6,7 +6,7 @@ from apps.common.validation import code_text, required_text
 from apps.water.models import Neighborhood, WaterZone, schedule_text
 from apps.water.serializers import NEIGHBORHOOD_ERRORS, slot_data
 
-from .models import CommitteeRep, Location, StreetName
+from .models import Circular, CommitteeRep, Location, StreetName
 from .text import ascii_digits, clean_text
 
 
@@ -164,4 +164,29 @@ class CommitteeRepSerializer(TrackedSerializer):
         value = re.sub(r"^(?:\+|00)97[02]", "0", value)
         if value and not re.match(r"^0\d{8,9}$", value):
             raise serializers.ValidationError("رقم الجوال غير صحيح (مثال: 0599123456).")
+        return value
+
+
+class CircularSerializer(TrackedSerializer):
+    class Meta:
+        model = Circular
+        fields = ["id", "title", "body", "pinned", "is_active", "created_at", "updated_at", "created_by_name",
+                  "updated_by_name"]
+        read_only_fields = ["id", "is_active", "created_at", "updated_at"]
+        extra_kwargs = {
+            "title": {"error_messages": {"blank": "العنوان مطلوب.", "required": "العنوان مطلوب.",
+                                         "max_length": "العنوان طويل جداً (الحد الأقصى 200 حرف)."}},
+            "body": {"max_length": 5000, "error_messages": {"blank": "نص التعميم مطلوب.", "required": "نص التعميم مطلوب.",
+                                                            "max_length": "النص طويل جداً (الحد الأقصى 5000 حرف)."}},
+            "pinned": {"required": False},
+        }
+
+    def validate_title(self, value):
+        return required_text(value, "العنوان")
+
+    def validate_body(self, value):
+        # keep the line breaks, trim each line
+        value = "\n".join(clean_text(line) for line in str(value).splitlines()).strip()
+        if not value:
+            raise serializers.ValidationError("نص التعميم مطلوب.")
         return value

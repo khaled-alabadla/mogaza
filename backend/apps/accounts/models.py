@@ -22,6 +22,8 @@ PERMISSIONS = [
     ("guide.view", "عرض دليل القسم", "دليل القسم"),
     ("committees.view", "عرض ممثلي لجان الأحياء", "لجان الأحياء"),
     ("committees.edit", "إضافة وتعديل وحذف ممثلي لجان الأحياء", "لجان الأحياء"),
+    ("circulars.view", "عرض التعميمات", "التعميمات"),
+    ("circulars.edit", "إضافة وتعديل وحذف التعميمات", "التعميمات"),
 ]
 PERMISSION_KEYS = [key for key, _, _ in PERMISSIONS]
 
@@ -29,7 +31,7 @@ PERMISSION_KEYS = [key for key, _, _ in PERMISSIONS]
 ROLE_DEFAULTS = {
     "admin": PERMISSION_KEYS,
     "editor": PERMISSION_KEYS,
-    "viewer": ["search.view", "water.view", "guide.view", "committees.view"],
+    "viewer": ["search.view", "water.view", "guide.view", "committees.view", "circulars.view"],
 }
 
 

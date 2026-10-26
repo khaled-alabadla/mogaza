@@ -20,6 +20,7 @@ const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
 const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
 const GuidePage = lazy(() => import('./pages/GuidePage'))
 const CommitteesPage = lazy(() => import('./pages/CommitteesPage'))
+const CircularsPage = lazy(() => import('./pages/CircularsPage'))
 const UrgentComplaintsPage = lazy(() => import('./pages/UrgentComplaintsPage'))
 const DailyReportPage = lazy(() => import('./pages/DailyReportPage'))
 const ComplaintsReportPage = lazy(() => import('./pages/ComplaintsReportPage'))
@@ -96,6 +97,14 @@ export default function App() {
                   element={
                     <RequirePermission perm="committees.view">
                       <CommitteesPage />
+                    </RequirePermission>
+                  }
+                />
+                <Route
+                  path="circulars"
+                  element={
+                    <RequirePermission perm="circulars.view">
+                      <CircularsPage />
                     </RequirePermission>
                   }
                 />

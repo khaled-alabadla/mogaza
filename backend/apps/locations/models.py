@@ -141,3 +141,26 @@ class CommitteeRep(TrackedModel):
 
     def snapshot(self):
         return {"name": self.name, "committee": self.committee, "phone": self.phone, "is_active": self.is_active}
+
+
+class Circular(TrackedModel):
+    """«تعميمات»: a department instruction for answering citizens (e.g. where to send them for a topic)."""
+
+    title = models.CharField("العنوان", max_length=200)
+    body = models.TextField("نص التعميم")
+    pinned = models.BooleanField("مثبّت في الأعلى", default=False)
+
+    class Meta:
+        verbose_name = "تعميم"
+        verbose_name_plural = "التعميمات"
+        ordering = ["-pinned", "-updated_at", "-id"]
+        indexes = [GinIndex(fields=["search_text"], name="circular_search_trgm", opclasses=["gin_trgm_ops"])]
+
+    def __str__(self):
+        return self.title
+
+    def build_search_text(self):
+        return normalize_for_search(f"{self.title} {self.body}")
+
+    def snapshot(self):
+        return {"title": self.title, "body": self.body, "pinned": self.pinned, "is_active": self.is_active}

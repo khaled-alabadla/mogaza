@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CommitteeRep, Location, StreetName
+from .models import Circular, CommitteeRep, Location, StreetName
 
 READONLY = ["created_at", "updated_at", "created_by", "updated_by", "deleted_at", "deleted_by"]
 
@@ -27,4 +27,12 @@ class CommitteeRepAdmin(admin.ModelAdmin):
     list_display = ["name", "committee", "phone", "is_active"]
     list_filter = ["is_active"]
     search_fields = ["name", "committee", "phone"]
+    readonly_fields = READONLY
+
+
+@admin.register(Circular)
+class CircularAdmin(admin.ModelAdmin):
+    list_display = ["title", "pinned", "is_active", "updated_at"]
+    list_filter = ["pinned", "is_active"]
+    search_fields = ["title", "body"]
     readonly_fields = READONLY

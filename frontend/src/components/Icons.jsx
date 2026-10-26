@@ -230,3 +230,9 @@ export const HomeIcon = (p) => (
     <path d="M10 19v-5h4v5" />
   </Svg>
 )
+export const MegaphoneIcon = (p) => (
+  <Svg {...p}>
+    <path d="M4 10v4a1 1 0 0 0 1 1h2l5 4V5L7 9H5a1 1 0 0 0-1 1z" />
+    <path d="M16 9a4 4 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11" />
+  </Svg>
+)

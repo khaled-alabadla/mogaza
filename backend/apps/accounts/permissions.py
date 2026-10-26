@@ -59,6 +59,8 @@ WaterPermission = key_permission("water.view", "water.edit")
 WaterZonePermission = key_permission(("water.view", "search.view"), "water.edit")
 # Neighborhood committees' representatives: the «لجان الأحياء» page.
 CommitteePermission = key_permission("committees.view", "committees.edit")
+# Department circulars: the «تعميمات» page.
+CircularPermission = key_permission("circulars.view", "circulars.edit")
 # Neighborhoods: their names are read by every page (search filter, water table, complaints' «الحي»);
 # editing them belongs to the locations page.
 NeighborhoodPermission = key_permission(

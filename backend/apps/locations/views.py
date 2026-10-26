@@ -4,14 +4,14 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.accounts.permissions import CommitteePermission, IsAdminRole, SearchPermission, is_admin
+from apps.accounts.permissions import CircularPermission, CommitteePermission, IsAdminRole, SearchPermission, is_admin
 from apps.audit.mixins import AuditedViewSetMixin
 from apps.audit.models import AuditLog
 from apps.common.params import bool_param, int_param, text_param
 from apps.water.models import WaterSlot
 
-from .models import CommitteeRep, Location, StreetName
-from .serializers import CommitteeRepSerializer, LocationSerializer, StreetNameSerializer
+from .models import Circular, CommitteeRep, Location, StreetName
+from .serializers import CircularSerializer, CommitteeRepSerializer, LocationSerializer, StreetNameSerializer
 from .text import normalize_for_search, search_terms
 
 
@@ -104,3 +104,17 @@ class CommitteeRepViewSet(TrackedViewSet):
     serializer_class = CommitteeRepSerializer
     permission_classes = [CommitteePermission]
     primary_name_field = "name"
+
+
+class CircularViewSet(TrackedViewSet):
+    """«تعميمات»: /api/circulars/ (?search=), pinned first then the latest; soft delete + admin restore."""
+
+    model = Circular
+    serializer_class = CircularSerializer
+    permission_classes = [CircularPermission]
+    primary_name_field = "title"
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # pinned circulars stay on top, also among search results
+        return qs.order_by("-pinned", *(qs.query.order_by or ("-updated_at", "-id")))
