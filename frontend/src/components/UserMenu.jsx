@@ -68,7 +68,7 @@ export default function UserMenu() {
         }`}
       >
         <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-base font-bold text-brand-700 ring-1 ring-brand-100"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-base font-bold text-white shadow-sm ring-2 ring-white"
           aria-hidden="true"
         >
           {initial(name)}

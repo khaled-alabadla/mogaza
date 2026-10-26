@@ -82,19 +82,19 @@ export function SidebarNav({ sections, collapsed = false }) {
 export default function Sidebar({ sections, collapsed, onToggleCollapsed }) {
   return (
     <aside
-      className={`sticky top-0 hidden h-screen shrink-0 flex-col bg-brand-800 text-white shadow-[inset_1px_0_0_rgb(255_255_255/0.04)] transition-[width] duration-200 lg:flex print:hidden ${
+      className={`sticky top-0 hidden h-screen shrink-0 flex-col overflow-hidden bg-brand-800 text-white shadow-[inset_1px_0_0_rgb(255_255_255/0.04)] transition-[width] duration-200 lg:flex print:hidden ${
         collapsed ? 'w-[4.5rem]' : 'w-64'
       }`}
       aria-label="الشريط الجانبي"
     >
       <Tricolor green="bg-brand-500" />
-      <div className={`flex h-[4.75rem] shrink-0 items-center border-b border-white/10 ${collapsed ? 'px-2' : 'px-4'}`}>
+      <div className={`relative flex h-[4.75rem] shrink-0 items-center border-b border-white/10 ${collapsed ? 'px-2' : 'px-4'}`}>
         <Brand collapsed={collapsed} />
       </div>
-      <div className={`flex-1 overflow-y-auto py-5 ${collapsed ? 'px-2' : 'px-3'} [scrollbar-color:rgb(255_255_255/0.2)_transparent] [scrollbar-width:thin]`}>
+      <div className={`relative flex-1 overflow-y-auto py-5 ${collapsed ? 'px-2' : 'px-3'} [scrollbar-color:rgb(255_255_255/0.2)_transparent] [scrollbar-width:thin]`}>
         <SidebarNav sections={sections} collapsed={collapsed} />
       </div>
-      <div className="shrink-0 border-t border-white/10 p-2">
+      <div className="relative shrink-0 border-t border-white/10 p-2">
         <button
           type="button"
           onClick={onToggleCollapsed}

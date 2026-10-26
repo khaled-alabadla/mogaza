@@ -5,7 +5,7 @@ import NumberBadge from './NumberBadge'
 export default function LocationCard({ location, ...actions }) {
   return (
     <article
-      className="card group relative flex flex-col gap-4 p-4 transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:p-5"
+      className="card card-lift group relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5"
       aria-label={location.place_name}
     >
       {/* a brand edge that lights up on hover */}

@@ -73,7 +73,7 @@ function Detail({ label, children, className = '' }) {
 function UrgentRow({ item, canEdit, onToggle, onEdit, onDelete }) {
   const resolved = item.status === 'resolved'
   return (
-    <li className="card relative overflow-hidden transition-shadow hover:shadow-md">
+    <li className="card card-lift relative overflow-hidden">
       <span className={`absolute inset-y-0 start-0 w-1 ${resolved ? 'bg-brand-500' : 'bg-danger-600'}`} aria-hidden="true" />
       <dl className="grid grid-cols-2 gap-x-6 gap-y-4 p-4 sm:grid-cols-3 sm:p-5 lg:grid-cols-5">
         <Detail label="رقم الشكوى">{item.number && <span className="num">{item.number}</span>}</Detail>
@@ -231,7 +231,7 @@ export default function UrgentComplaintsPage() {
           />
         }
       >
-        <ul className="space-y-2.5">
+        <ul className="stagger space-y-2.5">
           {data.results.map((item) => (
             <UrgentRow
               key={item.id}

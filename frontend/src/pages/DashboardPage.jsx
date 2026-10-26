@@ -218,7 +218,7 @@ export default function DashboardPage() {
             />
           }
         >
-          <div className="space-y-2.5">
+          <div className="stagger space-y-2.5">
             {data.results.map((record) => (
               <Card
                 key={record.id}

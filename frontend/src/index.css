@@ -22,7 +22,7 @@
   --color-gold-700: #8a6a00;
 
   --color-ink: #26282b;
-  --color-muted: #62676e;
+  --color-muted: #565b62;
   --color-line: #e3e6e9;
   --color-canvas: #f6f7f6;
 }
@@ -44,6 +44,13 @@
     unicode-bidi: isolate;
     font-variant-numeric: tabular-nums;
   }
+  ::selection {
+    background: var(--color-brand-100);
+    color: var(--color-brand-800);
+  }
+  html {
+    scrollbar-color: #c9cdd1 transparent;
+  }
   :focus-visible {
     outline: 2px solid var(--color-brand-500);
     outline-offset: 2px;
@@ -62,7 +69,7 @@
   /* Every button has a 1px border (transparent unless coloured) so primary and secondary
      buttons placed side by side are exactly the same height. */
   .btn {
-    @apply tap inline-flex items-center justify-center gap-2 rounded-lg border border-transparent px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+    @apply tap inline-flex items-center justify-center gap-2 rounded-lg border border-transparent px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-[color,background-color,border-color,box-shadow,transform] duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100;
   }
   /* use together with .btn, e.g. className="btn btn-primary" */
   .btn-primary {
@@ -105,6 +112,10 @@
   /* A hairline border plus a barely-there shadow: cards read as raised without looking heavy. */
   .card {
     @apply rounded-xl border border-line bg-white shadow-[0_1px_2px_rgb(16_24_40/0.04)];
+  }
+  /* Record cards: on hover the border turns faintly green and the card lifts by a pixel. */
+  .card-lift {
+    @apply transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-px hover:border-brand-100 hover:shadow-[0_6px_16px_-6px_rgb(6_70_42/0.15)] print:transform-none;
   }
   .field-error {
     @apply mt-1 text-sm text-danger-700;
@@ -206,6 +217,55 @@
 @media (prefers-reduced-motion: reduce) {
   .drawer-panel,
   .drawer-backdrop {
+    animation: none;
+  }
+}
+
+/* Loading placeholders: a light sweep across grey bars. */
+.skeleton {
+  background: linear-gradient(90deg, #eceeef 0%, #f6f7f8 40%, #eceeef 80%) 0 0 / 300% 100%;
+  animation: skeleton-sweep 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* Each page fades in and rises a few pixels when it opens. */
+.page-enter {
+  animation: page-enter 0.28s ease-out both;
+}
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Lists: the first cards come in one after another (a short cascade, then the rest at once). */
+.stagger > * {
+  animation: page-enter 0.3s ease-out both;
+}
+.stagger > :nth-child(2) { animation-delay: 40ms; }
+.stagger > :nth-child(3) { animation-delay: 80ms; }
+.stagger > :nth-child(4) { animation-delay: 120ms; }
+.stagger > :nth-child(5) { animation-delay: 160ms; }
+.stagger > :nth-child(n + 6) { animation-delay: 200ms; }
+
+/* Login: the form rises into place after the page opens. */
+.login-card {
+  animation: page-enter 0.5s 0.15s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .stagger > *,
+  .login-card,
+  .page-enter {
     animation: none;
   }
 }

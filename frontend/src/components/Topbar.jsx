@@ -1,10 +1,13 @@
 import { forwardRef } from 'react'
 import { Link, matchPath, useLocation } from 'react-router-dom'
 import logo from '../assets/logo-88.webp'
-import { MenuIcon } from './Icons'
+import { CalendarIcon, MenuIcon } from './Icons'
 import Tricolor from './Tricolor'
 import UserMenu from './UserMenu'
 import { useText } from '../context/ContentContext'
+
+// «الأحد، 26 أكتوبر»: Arabic names with Western digits, like the rest of the site
+const TODAY_FORMAT = new Intl.DateTimeFormat('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })
 
 /** The section / page the visitor is on («الشكاوى والاستفسارات › الاستفسارات»), from the sidebar sections. */
 function useCurrentPage(sections) {
@@ -69,7 +72,11 @@ const Topbar = forwardRef(function Topbar({ sections, hasNav, drawerOpen, onOpen
           </p>
         )}
 
-        <div className="ms-auto flex shrink-0 items-center gap-2">
+        <div className="ms-auto flex shrink-0 items-center gap-3">
+          <p className="hidden items-center gap-2 text-sm text-muted md:flex">
+            <CalendarIcon className="h-4 w-4 text-brand-600" />
+            {TODAY_FORMAT.format(new Date())}
+          </p>
           <UserMenu />
         </div>
       </div>

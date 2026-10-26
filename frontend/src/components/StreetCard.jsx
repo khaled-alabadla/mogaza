@@ -6,7 +6,7 @@ import NumberBadge from './NumberBadge'
 export default function StreetCard({ street, ...actions }) {
   return (
     <article
-      className="card group relative flex flex-col gap-4 p-4 transition-shadow hover:shadow-md sm:flex-row sm:items-center sm:p-5"
+      className="card card-lift group relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:p-5"
       aria-label={street.common_name}
     >
       <span className="absolute inset-y-4 start-0 w-1 rounded-e-full bg-brand-600 opacity-0 transition-opacity group-hover:opacity-100" aria-hidden="true" />

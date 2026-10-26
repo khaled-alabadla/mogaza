@@ -67,7 +67,10 @@ export default function MainLayout() {
         <main className="mx-auto min-h-[calc(100svh-4.3rem)] w-full max-w-6xl flex-1 px-4 py-6 sm:py-8 lg:px-8 print:min-h-0 print:max-w-none print:p-0">
           {/* pages are lazy-loaded: keep the shell while a page's code downloads */}
           <Suspense fallback={<LoadingState />}>
-            <Outlet />
+            {/* a soft fade-in each time the page changes */}
+            <div key={pathname} className="page-enter">
+              <Outlet />
+            </div>
           </Suspense>
         </main>
         <Footer />

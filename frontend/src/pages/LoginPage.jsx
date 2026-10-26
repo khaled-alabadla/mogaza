@@ -105,7 +105,7 @@ export default function LoginPage() {
           <form
             onSubmit={handleSubmit}
             noValidate
-            className="overflow-hidden rounded-3xl bg-white shadow-xl ring-1 shadow-brand-800/5 ring-line"
+            className="login-card overflow-hidden rounded-3xl bg-white shadow-xl ring-1 shadow-brand-800/5 ring-line"
           >
             <Tricolor />
 

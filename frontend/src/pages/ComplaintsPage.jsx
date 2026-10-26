@@ -52,7 +52,7 @@ function ComplaintCard({ complaint: c, fields, canEdit, selected, onSelect, onTo
   const uploaded = c.status === 'uploaded'
   const details = fields.filter((f) => !OWN_PLACE.has(f.name) && c[f.name])
   return (
-    <li className={`card relative overflow-hidden p-4 transition-shadow hover:shadow-md sm:p-5 ${selected ? 'border-brand-500 ring-2 ring-brand-100' : ''}`}>
+    <li className={`card card-lift relative overflow-hidden p-4 sm:p-5 ${selected ? 'border-brand-500 ring-2 ring-brand-100' : ''}`}>
       {/* status edge: gold while waiting, green once uploaded */}
       <span className={`absolute inset-y-0 start-0 w-1 ${uploaded ? 'bg-brand-500' : 'bg-gold-400'}`} aria-hidden="true" />
       <div className="flex items-start gap-3">
@@ -307,7 +307,7 @@ export function ComplaintsLog({ kind }) {
           />
         }
       >
-        <ul className="space-y-2.5">
+        <ul className="stagger space-y-2.5">
           {data.results.map((c) => (
             <ComplaintCard
               key={c.id}

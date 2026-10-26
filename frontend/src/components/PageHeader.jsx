@@ -20,8 +20,9 @@ export default function PageHeader({ title, subtitle, children }) {
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         <div className="flex min-w-0 items-center gap-3.5">
           {Icon && (
-            <span className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 sm:flex">
+            <span className="relative hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-50 to-brand-100 text-brand-700 ring-1 ring-brand-100 sm:flex">
               <Icon className="h-[1.35rem] w-[1.35rem]" />
+              <span className="absolute -top-1 -left-1 h-2 w-2 rotate-45 bg-gold-400" aria-hidden="true" />
             </span>
           )}
           <div className="min-w-0">
