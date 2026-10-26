@@ -149,14 +149,9 @@ describe('WaterSchedulePage', () => {
     // today first, then the coming days in order
     const days = screen.getAllByRole('region').map((el) => el.getAttribute('aria-label'))
     expect(days).toEqual(['الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت', 'الأحد'])
-    // today and tomorrow are open, the other days open on demand
-    const toggle = (name) => within(day(name)).getByRole('button')
-    expect(toggle('الاثنين')).toHaveAttribute('aria-expanded', 'true')
-    expect(toggle('الثلاثاء')).toHaveAttribute('aria-expanded', 'true')
     expect(within(day('الثلاثاء')).getByText('غداً')).toBeInTheDocument()
-    expect(toggle('السبت')).toHaveAttribute('aria-expanded', 'false')
-    await userEvent.click(toggle('السبت'))
-    expect(toggle('السبت')).toHaveAttribute('aria-expanded', 'true')
+    // every day is always open: nothing to click to see its areas
+    expect(within(day('السبت')).queryByRole('button')).not.toBeInTheDocument()
   })
 
   it('answers «when does water reach …» directly, with the next visit', async () => {
@@ -191,15 +186,12 @@ describe('WaterSchedulePage', () => {
     expect(screen.getByText('السبت / الثلاثاء')).toBeInTheDocument()
   })
 
-  it('«حسب المواعيد» uses the same open / closed sections: today and tomorrow open', async () => {
+  it('«حسب المواعيد» marks today and tomorrow, every appointment open', async () => {
     renderPage()
     await screen.findByText('الدرج')
-    const toggle = (days) => within(rowOf(days)).getByRole('button', { name: new RegExp(days) })
-    expect(toggle('الاثنين / الجمعة')).toHaveAttribute('aria-expanded', 'true') // today (Monday)
+    expect(within(rowOf('الاثنين / الجمعة')).getByText('تصل المياه اليوم')).toBeInTheDocument() // today (Monday)
     expect(within(rowOf('السبت / الثلاثاء')).getByText('غداً')).toBeInTheDocument() // tomorrow (Tuesday)
-    expect(toggle('السبت / الثلاثاء')).toHaveAttribute('aria-expanded', 'true')
-    await userEvent.click(toggle('السبت / الثلاثاء'))
-    expect(toggle('السبت / الثلاثاء')).toHaveAttribute('aria-expanded', 'false')
+    expect(within(rowOf('السبت / الثلاثاء')).getByText('النديم')).toBeVisible()
   })
 
   it('search keeps only rows with matching addresses', async () => {

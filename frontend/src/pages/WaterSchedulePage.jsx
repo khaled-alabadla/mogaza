@@ -99,8 +99,6 @@ export default function WaterSchedulePage() {
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState(null) // { row | null }
   const [printedAt, setPrintedAt] = useState(() => new Date())
-  const [openDays, setOpenDays] = useState(null) // days opened / closed by hand (null = the default: today + tomorrow)
-  const [openRows, setOpenRows] = useState(null) // the same for «حسب المواعيد» (by row id)
 
   // the printed header shows when it was printed (button or Ctrl+P)
   useEffect(() => {
@@ -347,40 +345,23 @@ export default function WaterSchedulePage() {
             {byDay
               // searching a weekday («الثلاثاء») shows that day only; otherwise days without a match are hidden
               .filter((d) => (searchedDay === null ? d.areas.length || !query.trim() : d.day === searchedDay))
-              .map(({ day, name, areas }, index) => {
+              .map(({ day, name, areas }) => {
                 const isToday = day === data.today
                 const isTomorrow = data.today !== null && data.today !== undefined && day === (data.today + 1) % 7
-                const open = query.trim() ? true : openDays ? openDays.has(day) : index < 2
                 const sorted = [...areas].sort(byArabicName)
                 return (
                   <section key={day} aria-label={name} className={`break-inside-avoid ${isToday ? 'bg-brand-50/40 print:bg-transparent' : ''}`}>
-                    <h3>
-                      <button
-                        type="button"
-                        aria-expanded={open}
-                        onClick={() =>
-                          setOpenDays((current) => {
-                            const next = new Set(current ?? byDay.slice(0, 2).map((d) => d.day))
-                            if (next.has(day)) next.delete(day)
-                            else next.add(day)
-                            return next
-                          })
-                        }
-                        className="flex w-full items-center gap-3 px-4 py-3.5 text-start transition-colors hover:bg-canvas/70 sm:px-5 print:py-2"
-                      >
-                        <span className={`text-base font-bold ${isToday ? 'text-brand-700' : 'text-ink'} print:text-ink`}>{name}</span>
-                        {isToday && (
-                          <span className="badge bg-brand-600 text-white shadow-sm print:hidden">
-                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold-400" aria-hidden="true" />
-                            تصل المياه اليوم
-                          </span>
-                        )}
-                        {isTomorrow && <span className="badge bg-gold-100 text-gold-700 print:hidden">غداً</span>}
-                        <ChevronDownIcon className={`ms-auto h-5 w-5 text-gray-400 transition-transform print:hidden ${open ? 'rotate-180' : ''}`} />
-                      </button>
+                    <h3 className="flex items-center gap-3 px-4 pt-3.5 pb-2 sm:px-5 print:py-2">
+                      <span className={`text-base font-bold ${isToday ? 'text-brand-700' : 'text-ink'} print:text-ink`}>{name}</span>
+                      {isToday && (
+                        <span className="badge bg-brand-600 text-white shadow-sm print:hidden">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-gold-400" aria-hidden="true" />
+                          تصل المياه اليوم
+                        </span>
+                      )}
+                      {isTomorrow && <span className="badge bg-gold-100 text-gold-700 print:hidden">غداً</span>}
                     </h3>
-                    {/* closed days stay in the printed sheet */}
-                    <div className={`px-4 pb-4 sm:px-5 ${open ? '' : 'hidden print:block'}`}>
+                    <div className="px-4 pb-4 sm:px-5">
                       {sorted.length ? (
                         <ul className="columns-2 gap-x-6 text-[0.95rem] leading-8 text-ink sm:columns-3 lg:columns-4">
                           {sorted.map((a) => (
@@ -407,29 +388,11 @@ export default function WaterSchedulePage() {
             {rows.map(({ row, matches }) => {
               const isToday = row.days.includes(data.today)
               const isTomorrow = !isToday && data.today !== null && data.today !== undefined && row.days.includes((data.today + 1) % 7)
-              const open = query.trim() ? true : openRows ? openRows.has(row.id) : isToday || isTomorrow
               const sorted = [...row.area_list].sort(byArabicName)
               return (
                 <li key={row.id} className={`break-inside-avoid ${isToday ? 'bg-brand-50/40 print:bg-transparent' : ''}`}>
                   <div className="flex items-center gap-2 pe-2 sm:pe-3">
-                    <button
-                      type="button"
-                      aria-expanded={open}
-                      onClick={() =>
-                        setOpenRows((current) => {
-                          const next = new Set(
-                            current ??
-                              rows
-                                .filter(({ row: r }) => r.days.includes(data.today) || r.days.includes((data.today + 1) % 7))
-                                .map(({ row: r }) => r.id),
-                          )
-                          if (next.has(row.id)) next.delete(row.id)
-                          else next.add(row.id)
-                          return next
-                        })
-                      }
-                      className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3.5 text-start transition-colors hover:bg-canvas/70 sm:px-5 print:py-2"
-                    >
+                    <h3 className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-3.5 pb-2 sm:px-5 print:py-2">
                       <span className={`text-base font-bold ${isToday ? 'text-brand-700' : 'text-ink'} print:text-ink`}>{formatDays(row.days)}</span>
                       {isToday && (
                         <span className="badge bg-brand-600 text-white shadow-sm print:hidden">
@@ -438,8 +401,7 @@ export default function WaterSchedulePage() {
                         </span>
                       )}
                       {isTomorrow && <span className="badge bg-gold-100 text-gold-700 print:hidden">غداً</span>}
-                      <ChevronDownIcon className={`ms-auto h-5 w-5 shrink-0 text-gray-400 transition-transform print:hidden ${open ? 'rotate-180' : ''}`} />
-                    </button>
+                    </h3>
                     {canEdit && (
                       <div className="flex shrink-0 gap-0.5 print:hidden">
                         <button type="button" className="icon-action" aria-label="تعديل" title="تعديل" onClick={() => setEditing({ row: fullRow(row) })}>
@@ -451,8 +413,7 @@ export default function WaterSchedulePage() {
                       </div>
                     )}
                   </div>
-                  {/* closed rows stay in the printed sheet */}
-                  <div className={`px-4 pb-4 sm:px-5 ${open ? '' : 'hidden print:block'}`}>
+                  <div className="px-4 pb-4 sm:px-5">
                     <ul className="columns-2 gap-x-6 text-[0.95rem] leading-8 text-ink sm:columns-3 lg:columns-4">
                       {sorted.map((a) => (
                         <li key={a.id} className="flex items-baseline gap-2 break-inside-avoid">
