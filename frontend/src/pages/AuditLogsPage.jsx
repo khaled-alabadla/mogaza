@@ -33,6 +33,7 @@ const ENTITY_LABELS = {
   complaint: 'شكوى / استفسار',
   urgentcomplaint: 'شكوى عاجلة',
   dailyreport: 'التقرير اليومي',
+  committeerep: 'ممثل لجنة حي',
   sitecontent: 'محتوى الموقع',
   watertable: 'جدول المياه',
   waterzone: 'منطقة مياه',
@@ -68,6 +69,7 @@ const FIELD_LABELS = {
   status: 'الحالة',
   note: 'ملاحظة',
   number: 'رقم الشكوى',
+  committee: 'اسم اللجنة',
   notes: 'ملاحظات',
   submitted_on: 'تاريخ التقديم',
 }

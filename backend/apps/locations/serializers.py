@@ -1,11 +1,13 @@
+import re
+
 from rest_framework import serializers
 
 from apps.common.validation import code_text, required_text
 from apps.water.models import Neighborhood, WaterZone, schedule_text
 from apps.water.serializers import NEIGHBORHOOD_ERRORS, slot_data
 
-from .models import Location, StreetName
-from .text import clean_text
+from .models import CommitteeRep, Location, StreetName
+from .text import ascii_digits, clean_text
 
 
 def user_label(user):
@@ -137,3 +139,29 @@ class StreetNameSerializer(TrackedSerializer):
 
     def validate_street_number(self, value):
         return code_text(value, "رقم الشارع")
+
+
+class CommitteeRepSerializer(TrackedSerializer):
+    class Meta:
+        model = CommitteeRep
+        fields = ["id", "name", "committee", "phone", "is_active", "created_at", "updated_at", "created_by_name",
+                  "updated_by_name"]
+        read_only_fields = ["id", "is_active", "created_at", "updated_at"]
+        extra_kwargs = {
+            "name": {"error_messages": {"blank": "الاسم مطلوب.", "required": "الاسم مطلوب."}},
+            "committee": {"error_messages": {"blank": "اسم اللجنة مطلوب.", "required": "اسم اللجنة مطلوب."}},
+            "phone": {"required": False, "allow_blank": True, "max_length": None},
+        }
+
+    def validate_name(self, value):
+        return required_text(value, "الاسم")
+
+    def validate_committee(self, value):
+        return required_text(value, "اسم اللجنة")
+
+    def validate_phone(self, value):
+        value = re.sub(r"[\s\-()]", "", ascii_digits(value or ""))
+        value = re.sub(r"^(?:\+|00)97[02]", "0", value)
+        if value and not re.match(r"^0\d{8,9}$", value):
+            raise serializers.ValidationError("رقم الجوال غير صحيح (مثال: 0599123456).")
+        return value

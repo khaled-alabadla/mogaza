@@ -57,6 +57,8 @@ SearchPermission = key_permission("search.view", "search.edit")
 WaterPermission = key_permission("water.view", "water.edit")
 # Water zones are also read by the locations page (a building's zone is picked there).
 WaterZonePermission = key_permission(("water.view", "search.view"), "water.edit")
+# Neighborhood committees' representatives: the «لجان الأحياء» page.
+CommitteePermission = key_permission("committees.view", "committees.edit")
 # Neighborhoods: their names are read by every page (search filter, water table, complaints' «الحي»);
 # editing them belongs to the locations page.
 NeighborhoodPermission = key_permission(

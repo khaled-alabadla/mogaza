@@ -223,3 +223,10 @@ export const ChartIcon = (p) => (
     <path d="M7 16v-5M12 16V7M17 16v-8" />
   </Svg>
 )
+export const HomeIcon = (p) => (
+  <Svg {...p}>
+    <path d="M4 10.5 12 4l8 6.5" />
+    <path d="M6 9v10h12V9" />
+    <path d="M10 19v-5h4v5" />
+  </Svg>
+)

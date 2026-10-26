@@ -19,6 +19,8 @@ export const PERMISSIONS = [
   'report.view',
   'report.edit',
   'guide.view',
+  'committees.view',
+  'committees.edit',
 ]
 
 /** What an anonymous visitor may open when the server enables public search. */

@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { authCan } from '../context/permissions'
-import { AlertIcon, BookIcon, ChartIcon, DropIcon, InboxIcon, ListIcon, QuestionIcon, SearchIcon, UsersIcon } from './Icons'
+import { AlertIcon, BookIcon, ChartIcon, DropIcon, HomeIcon, InboxIcon, ListIcon, QuestionIcon, SearchIcon, UsersIcon } from './Icons'
 
 /**
  * The site's sections (sidebar + footer + route-guard fallbacks). Adding a page = adding one entry:
@@ -15,6 +15,7 @@ export const NAV_SECTIONS = [
       { to: '/', label: 'البحث عن المواقع', short: 'البحث', icon: SearchIcon, perm: 'search.view' },
       { to: '/water', label: 'جدول المياه', short: 'المياه', icon: DropIcon, perm: 'water.view' },
       { to: '/guide', label: 'دليل القسم', short: 'الدليل', icon: BookIcon, perm: 'guide.view' },
+      { to: '/committees', label: 'لجان الأحياء', short: 'اللجان', icon: HomeIcon, perm: 'committees.view' },
     ],
   },
   {

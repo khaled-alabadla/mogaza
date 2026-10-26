@@ -79,6 +79,7 @@ function restorable(resource) {
 
 export const locationsApi = restorable('locations')
 export const streetsApi = restorable('streets')
+export const committeesApi = restorable('committees')
 export const usersApi = crud('users')
 /** Neighborhoods (الأحياء): `list` returns a plain, non-paginated array. */
 export const neighborhoodsApi = crud('neighborhoods')

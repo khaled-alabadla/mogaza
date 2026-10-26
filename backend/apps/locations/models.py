@@ -118,3 +118,26 @@ class StreetName(TrackedModel):
     def snapshot(self):
         return {"common_name": self.common_name, "official_name": self.official_name,
                 "street_number": self.street_number, "is_active": self.is_active}
+
+
+class CommitteeRep(TrackedModel):
+    """«لجان الأحياء»: a neighborhood committee's representative and how to reach them."""
+
+    name = models.CharField("الاسم", max_length=150)
+    committee = models.CharField("اسم اللجنة", max_length=200)
+    phone = models.CharField("رقم الجوال", max_length=10, blank=True)
+
+    class Meta:
+        verbose_name = "ممثل لجنة حي"
+        verbose_name_plural = "ممثلو لجان الأحياء"
+        ordering = ["id"]
+        indexes = [GinIndex(fields=["search_text"], name="committee_search_trgm", opclasses=["gin_trgm_ops"])]
+
+    def __str__(self):
+        return f"{self.name} ({self.committee})"
+
+    def build_search_text(self):
+        return normalize_for_search(f"{self.name} {self.committee} {self.phone}")
+
+    def snapshot(self):
+        return {"name": self.name, "committee": self.committee, "phone": self.phone, "is_active": self.is_active}

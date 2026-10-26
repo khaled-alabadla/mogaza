@@ -20,6 +20,8 @@ PERMISSIONS = [
     ("report.view", "عرض التقرير اليومي", "التقرير اليومي"),
     ("report.edit", "تعبئة التقرير اليومي وتعديله", "التقرير اليومي"),
     ("guide.view", "عرض دليل القسم", "دليل القسم"),
+    ("committees.view", "عرض ممثلي لجان الأحياء", "لجان الأحياء"),
+    ("committees.edit", "إضافة وتعديل وحذف ممثلي لجان الأحياء", "لجان الأحياء"),
 ]
 PERMISSION_KEYS = [key for key, _, _ in PERMISSIONS]
 
@@ -27,7 +29,7 @@ PERMISSION_KEYS = [key for key, _, _ in PERMISSIONS]
 ROLE_DEFAULTS = {
     "admin": PERMISSION_KEYS,
     "editor": PERMISSION_KEYS,
-    "viewer": ["search.view", "water.view", "guide.view"],
+    "viewer": ["search.view", "water.view", "guide.view", "committees.view"],
 }
 
 

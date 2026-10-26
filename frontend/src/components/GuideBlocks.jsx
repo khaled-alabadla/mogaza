@@ -69,6 +69,21 @@ const TONE_MARK = {
   dont: <CloseIcon className="h-4 w-4 text-danger-600" />,
 }
 
+const PHONE = /^0\d{8,9}$/
+
+/** A table cell: a phone number becomes a «call» link (kept left-to-right). */
+function Cell({ value }) {
+  const text = String(value ?? '')
+  if (PHONE.test(text.trim())) {
+    return (
+      <a href={`tel:${text.trim()}`} className="num font-semibold text-brand-700 hover:underline">
+        {text.trim()}
+      </a>
+    )
+  }
+  return text
+}
+
 /** A bordered table (scrolls sideways on a phone). `tones` marks «do» / «don't» columns. */
 function Table({ title, lead, head, rows, tones = [] }) {
   return (
@@ -98,7 +113,7 @@ function Table({ title, lead, head, rows, tones = [] }) {
                       c === 0 && !tones[0] ? 'font-semibold text-ink' : 'text-ink'
                     } ${tones[c] === 'dont' ? 'text-muted' : ''}`}
                   >
-                    {cell}
+                    <Cell value={cell} />
                   </td>
                 ))}
               </tr>

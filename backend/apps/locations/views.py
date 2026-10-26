@@ -4,14 +4,14 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.accounts.permissions import IsAdminRole, SearchPermission, is_admin
+from apps.accounts.permissions import CommitteePermission, IsAdminRole, SearchPermission, is_admin
 from apps.audit.mixins import AuditedViewSetMixin
 from apps.audit.models import AuditLog
 from apps.common.params import bool_param, int_param, text_param
 from apps.water.models import WaterSlot
 
-from .models import Location, StreetName
-from .serializers import LocationSerializer, StreetNameSerializer
+from .models import CommitteeRep, Location, StreetName
+from .serializers import CommitteeRepSerializer, LocationSerializer, StreetNameSerializer
 from .text import normalize_for_search, search_terms
 
 
@@ -95,3 +95,12 @@ class StreetNameViewSet(TrackedViewSet):
     model = StreetName
     serializer_class = StreetNameSerializer
     primary_name_field = "common_name"
+
+
+class CommitteeRepViewSet(TrackedViewSet):
+    """«لجان الأحياء»: /api/committees/ (?search=), soft delete + admin restore, audit-logged."""
+
+    model = CommitteeRep
+    serializer_class = CommitteeRepSerializer
+    permission_classes = [CommitteePermission]
+    primary_name_field = "name"
