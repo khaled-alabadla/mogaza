@@ -19,6 +19,7 @@ import { normalizeArabic } from '../utils/arabic'
 import { parseApiError } from '../utils/errors'
 import { formatDateTime } from '../utils/format'
 import { useText } from '../context/ContentContext'
+import useLiveRefresh from '../hooks/useLiveRefresh'
 
 /** The three views of the table: everything, or only the areas fed by one water source. */
 const VIEWS = [
@@ -127,6 +128,16 @@ export default function WaterSchedulePage() {
     load(controller.signal)
     return () => controller.abort()
   }, [load])
+
+  // what a colleague changes in the table shows without a reload (quietly, only when it changed)
+  useLiveRefresh(
+    () =>
+      waterTableApi
+        .list()
+        .then((fresh) => setData((previous) => (JSON.stringify(previous) === JSON.stringify(fresh) ? previous : fresh)))
+        .catch(() => {}),
+    { enabled: !loading && !error },
+  )
 
   // The current view's rows (a source view keeps only that source's areas, and drops rows left empty),
   // normalised once so typing in the search box only compares strings.

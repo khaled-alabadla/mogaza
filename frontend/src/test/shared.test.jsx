@@ -171,3 +171,26 @@ describe('lazyPage', () => {
     Object.defineProperty(window, 'location', { configurable: true, value: original })
   })
 })
+
+describe('usePagedList live refresh', () => {
+  it('quietly shows what colleagues added: every 30 seconds while visible, and on coming back to the page', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const { default: usePagedList } = await import('../hooks/usePagedList')
+    const first = { count: 1, results: [{ id: 1 }], next: null, previous: null }
+    const second = { count: 2, results: [{ id: 1 }, { id: 2 }], next: null, previous: null }
+    const fetcher = vi.fn().mockResolvedValueOnce(first).mockResolvedValue(second)
+    const params = { page: 1 }
+    const { result } = renderHook(() => usePagedList(fetcher, params))
+    await vi.waitFor(() => expect(result.current.data.count).toBe(1))
+    await act(() => vi.advanceTimersByTimeAsync(30000))
+    await vi.waitFor(() => expect(result.current.data.count).toBe(2))
+    expect(result.current.loading).toBe(false) // no loading state: the list never blinks
+    const calls = fetcher.mock.calls.length
+    await act(async () => {
+      vi.advanceTimersByTime(3000)
+      document.dispatchEvent(new Event('visibilitychange')) // back on the page
+    })
+    expect(fetcher.mock.calls.length).toBe(calls + 1)
+    vi.useRealTimers()
+  })
+})

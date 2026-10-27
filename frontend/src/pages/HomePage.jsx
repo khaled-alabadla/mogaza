@@ -22,6 +22,7 @@ import { homeApi } from '../services/api'
 import { displayName } from '../utils/format'
 import { guideTips } from './guideTips'
 import { GUIDE_DEFAULT } from './guideSections'
+import useLiveRefresh from '../hooks/useLiveRefresh'
 
 const SOURCES = [
   { value: 'mekorot', label: 'خط ماكروت', dot: 'bg-sky-500' },
@@ -31,7 +32,6 @@ const SOURCE_DOTS = Object.fromEntries(SOURCES.map((s) => [s.value, s.dot]))
 const AREAS_SHOWN = 24 // on large screens
 const AREAS_SHOWN_PHONE = 10 // on phones, so the circulars below stay close
 const TIPS_SHOWN = 5
-const REFRESH_EVERY = 3 * 60 * 1000 // the page is often left open all day
 const REPORT_DATE = new Intl.DateTimeFormat('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })
 // the waiting tiles always fill their row (no empty slot beside two tiles)
 const TILE_COLUMNS = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-2 lg:grid-cols-3', 4: 'grid-cols-2 lg:grid-cols-4' }
@@ -118,8 +118,8 @@ function updatedAgo(time, now) {
 }
 
 /**
- * The home figures: loaded on opening, then again every few minutes and whenever the page comes back
- * into view (another tab, a minimised window). A failed refresh keeps the figures already shown.
+ * The home figures: loaded on opening, then kept fresh by useLiveRefresh (every 30 seconds while
+ * the page is shown, and when it comes back into view). A failed refresh keeps the figures already shown.
  */
 function useHomeData() {
   const [data, setData] = useState(null)
@@ -143,14 +143,8 @@ function useHomeData() {
 
   useEffect(() => {
     load()
-    const timer = setInterval(() => document.visibilityState === 'visible' && load(), REFRESH_EVERY)
-    const onVisible = () => document.visibilityState === 'visible' && load()
-    document.addEventListener('visibilitychange', onVisible)
-    return () => {
-      clearInterval(timer)
-      document.removeEventListener('visibilitychange', onVisible)
-    }
   }, [load])
+  useLiveRefresh(load)
 
   return { data, error, loadedAt, reload: load }
 }
