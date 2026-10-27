@@ -10,6 +10,7 @@ import Pagination from '../components/Pagination'
 import RecordForm from '../components/RecordForm'
 import { LOCATION_FIELDS, STREET_FIELDS, withNeighborhoodOptions } from '../components/recordFields'
 import SearchBar from '../components/SearchBar'
+import BrandBand from '../components/BrandBand'
 import Segmented from '../components/Segmented'
 import StreetCard from '../components/StreetCard'
 import { useAuth } from '../context/AuthContext'
@@ -157,24 +158,24 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {/* The search area: light, with the login page's faint diamonds behind it */}
-      <section className="relative overflow-hidden rounded-2xl border border-line bg-white px-5 py-8 text-center sm:px-10 sm:py-10">
-        <div className="harlequin-soft" aria-hidden="true" />
-        <div className="relative mx-auto max-w-2xl">
-          <h1 className="text-2xl font-bold text-ink sm:text-[1.75rem]">{searchTitle}</h1>
-          <p className="mt-2 text-sm text-muted">{searchSubtitle}</p>
+      {/* The search area: the same green band as the home page's welcome */}
+      <BrandBand label="البحث" className="px-5 pt-9 pb-8 text-center sm:px-10 sm:pt-11 sm:pb-10">
+        <div className="mx-auto max-w-2xl">
+          <h1 className="text-2xl font-bold sm:text-[1.75rem]">{searchTitle}</h1>
+          <p className="mt-2 text-sm text-white/75">{searchSubtitle}</p>
           <div className="mt-6">
             <SearchBar value={input} onChange={setInput} placeholder={scope.placeholder} />
           </div>
           <Segmented
             className="mt-4"
+            tone="dark"
             label="نوع البحث"
             value={scopeKey}
             onChange={(key) => updateParams({ scope: key === 'locations' ? null : key, page: null })}
             options={Object.entries(SCOPES).map(([key, s]) => ({ value: key, label: s.tab }))}
           />
         </div>
-      </section>
+      </BrandBand>
 
       <section className="mt-8">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">

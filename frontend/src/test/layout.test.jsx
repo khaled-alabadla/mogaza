@@ -168,6 +168,17 @@ describe('MainLayout', () => {
     expect(within(nav).getByRole('link', { name: 'البحث عن المواقع' })).toHaveAttribute('href', '/search')
   })
 
+  it('opens each new page at its top', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    renderLayout()
+    scrollTo.mockClear()
+    const nav = screen.getAllByRole('navigation', { name: 'القائمة الرئيسية' })[0]
+    await userEvent.click(within(nav).getByRole('link', { name: 'جدول المياه' }))
+    expect(screen.getByText('محتوى المياه')).toBeInTheDocument()
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 0 }))
+    scrollTo.mockRestore()
+  })
+
   it('opens the mobile drawer and closes it on Escape, the backdrop, the close button and navigation', async () => {
     renderLayout()
     const toggle = screen.getByRole('button', { name: 'فتح القائمة' })

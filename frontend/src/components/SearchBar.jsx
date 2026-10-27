@@ -20,7 +20,7 @@ export default function SearchBar({ value, onChange, placeholder }) {
           autoFocus
           autoComplete="off"
           enterKeyHint="search"
-          className="w-full rounded-xl border border-line bg-white py-3.5 pr-13 pl-12 text-lg text-ink shadow-sm placeholder:text-gray-500 hover:border-gray-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
+          className="w-full rounded-xl border border-line bg-white py-3.5 pr-13 pl-12 text-lg text-ink shadow-sm placeholder:text-gray-500 hover:border-gray-300 focus:border-gold-400 focus:ring-4 focus:ring-gold-400/30 focus:outline-none [&::-webkit-search-cancel-button]:hidden"
         />
         {value && (
           <button

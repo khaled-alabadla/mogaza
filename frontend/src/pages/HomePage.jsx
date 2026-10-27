@@ -4,6 +4,7 @@ import EmptyState from '../components/EmptyState'
 import {
   AlertIcon,
   ArrowLeftIcon,
+  BulbIcon,
   ChartIcon,
   CheckIcon,
   DropIcon,
@@ -13,11 +14,14 @@ import {
   QuestionIcon,
   ShieldIcon,
 } from '../components/Icons'
-import LoadingState from '../components/LoadingState'
 import Segmented from '../components/Segmented'
+import BrandBand from '../components/BrandBand'
 import { useAuth } from '../context/AuthContext'
+import { useContentValue } from '../context/ContentContext'
 import { homeApi } from '../services/api'
 import { displayName } from '../utils/format'
+import { guideTips } from './guideTips'
+import { GUIDE_DEFAULT } from './guideSections'
 
 const SOURCES = [
   { value: 'mekorot', label: 'خط ماكروت', dot: 'bg-sky-500' },
@@ -26,11 +30,70 @@ const SOURCES = [
 const SOURCE_DOTS = Object.fromEntries(SOURCES.map((s) => [s.value, s.dot]))
 const AREAS_SHOWN = 24 // on large screens
 const AREAS_SHOWN_PHONE = 10 // on phones, so the circulars below stay close
+const TIPS_SHOWN = 5
 const REFRESH_EVERY = 3 * 60 * 1000 // the page is often left open all day
 const REPORT_DATE = new Intl.DateTimeFormat('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })
 // the waiting tiles always fill their row (no empty slot beside two tiles)
 const TILE_COLUMNS = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-2 lg:grid-cols-3', 4: 'grid-cols-2 lg:grid-cols-4' }
 const byArabicName = (a, b) => a.name.localeCompare(b.name, 'ar')
+
+// «الثلاثاء، 27 أكتوبر» and «5 جمادى الأولى 1448 هـ» (Western digits, like the rest of the site)
+const GREGORIAN = new Intl.DateTimeFormat('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })
+const HIJRI = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura-nu-latn', { day: 'numeric', month: 'long', year: 'numeric' })
+
+function hijriDate(date) {
+  try {
+    return HIJRI.format(date)
+  } catch {
+    return '' // a browser without the Islamic calendar: the Gregorian date alone
+  }
+}
+
+/** «شيء واحد يحتاج…» / «شيئان يحتاجان…» / «3 أشياء تحتاج…» / «12 شيئاً يحتاج…» */
+function waitingSentence(n) {
+  if (n === 1) return 'شيء واحد يحتاج انتباهك اليوم.'
+  if (n === 2) return 'شيئان يحتاجان انتباهك اليوم.'
+  if (n <= 10) return `${n} أشياء تحتاج انتباهك اليوم.`
+  return `${n} شيئاً يحتاج انتباهك اليوم.`
+}
+
+/**
+ * Counts from 0 up to `value` in about half a second when it first shows (and from the old figure to
+ * the new one after a refresh). Without animation (reduced motion, hidden tab) it is just `value`;
+ * a timer makes sure the final figure always lands even if animation frames are paused.
+ */
+function useCountUp(value, duration = 600) {
+  const [shown, setShown] = useState(0)
+  const from = useRef(0)
+
+  useEffect(() => {
+    const start = from.current
+    from.current = value
+    const still =
+      typeof value !== 'number' ||
+      document.visibilityState === 'hidden' ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    if (still || start === value) {
+      setShown(value)
+      return undefined
+    }
+    let frame = 0
+    const began = performance.now()
+    const step = (now) => {
+      const t = Math.min(1, (now - began) / duration)
+      setShown(Math.round(start + (value - start) * (1 - (1 - t) ** 3))) // ease-out
+      if (t < 1) frame = requestAnimationFrame(step)
+    }
+    frame = requestAnimationFrame(step)
+    const done = setTimeout(() => setShown(value), duration + 100)
+    return () => {
+      cancelAnimationFrame(frame)
+      clearTimeout(done)
+    }
+  }, [value, duration])
+
+  return shown
+}
 
 function greeting() {
   return new Date().getHours() < 12 ? 'صباح الخير' : 'مساء الخير'
@@ -102,6 +165,19 @@ function useNow() {
   return now
 }
 
+/** A figure that counts up when it appears; screen readers get the final figure only. */
+function CountUp({ value }) {
+  const shown = useCountUp(value)
+  return (
+    <>
+      <span className="num" aria-hidden="true">
+        {shown}
+      </span>
+      <span className="sr-only">{value}</span>
+    </>
+  )
+}
+
 /**
  * One «needs attention» tile: an icon, a label, the figure (or a short text), a hint; links to its page.
  * `wide` (one or two tiles in the row): laid out on one line, the figure at the far end.
@@ -112,7 +188,7 @@ function AttentionTile({ to, icon: Icon, label, value, text, hint, tone, wide })
     <p className={`text-sm font-bold text-gold-700 sm:text-base ${wide ? '' : 'mt-1'}`}>{text}</p>
   ) : (
     <p className={`text-2xl font-bold text-ink sm:text-3xl ${wide ? '' : 'mt-0.5'}`}>
-      <span className="num">{value}</span>
+      <CountUp value={value} />
     </p>
   )
   const icon = (
@@ -332,6 +408,112 @@ function CircularsPanel({ circulars, className }) {
   )
 }
 
+/**
+ * The welcome band in the municipality's colours: the date (Gregorian and Hijri), the greeting, and one
+ * sentence saying how the day looks.
+ */
+function WelcomeBand({ name, summary, loadedAt, now, error }) {
+  const today = new Date(now)
+  const hijri = hijriDate(today)
+  return (
+    <BrandBand label="ترحيب" className="px-5 pt-7 pb-6 sm:px-8 sm:pt-8 sm:pb-7">
+      <div>
+        <p className="text-sm text-white/70">
+          {GREGORIAN.format(today)}
+          {hijri && (
+            <>
+              <span className="mx-2 text-gold-400" aria-hidden="true">
+                ◆
+              </span>
+              {hijri}
+            </>
+          )}
+        </p>
+        <h1 className="mt-1.5 text-2xl font-bold tracking-tight sm:text-3xl">
+          {greeting()}
+          {name && `، ${name}`}
+        </h1>
+        <p className="mt-2 text-base text-white/90">{summary}</p>
+        {loadedAt && (
+          <p className="mt-4 inline-flex items-center gap-1.5 text-xs text-white/60" aria-live="polite">
+            <span className={`h-1.5 w-1.5 rounded-full ${error ? 'bg-danger-600' : 'bg-gold-400'}`} aria-hidden="true" />
+            آخر تحديث {updatedAgo(loadedAt, now)}
+            {error && <span className="text-white/80">(تعذر التحديث، سنحاول مجدداً)</span>}
+          </p>
+        )}
+      </div>
+    </BrandBand>
+  )
+}
+
+/**
+ * «نصائح للتعامل مع المواطن»: the guide's golden rules, always the same; the whole card opens the
+ * guide on «التعامل مع المواطن».
+ */
+function CitizenTips({ tips }) {
+  return (
+    <Link
+      to="/guide?tab=citizens"
+      aria-label="نصائح للتعامل مع المواطن، افتح «التعامل مع المواطن» في دليل القسم"
+      className="card card-lift group relative block overflow-hidden border-gold-400/50 p-4 sm:p-5"
+    >
+      <span className="absolute inset-y-0 start-0 w-1 bg-gold-400" aria-hidden="true" />
+      <h2 className="flex items-center gap-2 font-bold text-ink">
+        <BulbIcon className="h-5 w-5 text-gold-700" />
+        نصائح للتعامل مع المواطن
+      </h2>
+      <ul className="mt-3 space-y-2">
+        {tips.slice(0, TIPS_SHOWN).map((tip) => (
+          <li key={tip} className="flex items-start gap-2 text-sm leading-6 text-ink">
+            <CheckIcon className="mt-1 h-4 w-4 shrink-0 text-brand-600" />
+            {tip}
+          </li>
+        ))}
+      </ul>
+      <span className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-brand-700 group-hover:underline">
+        المزيد في دليل القسم
+        <ArrowLeftIcon className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" />
+      </span>
+    </Link>
+  )
+}
+
+/** While the figures load: the shape of the page itself (tiles, then the two panels). */
+function HomeSkeleton() {
+  const bar = (className) => <span className={`skeleton block rounded-md ${className}`} />
+  return (
+    <div role="status" aria-live="polite" className="space-y-7">
+      <span className="sr-only">جارٍ تحميل ملخص اليوم…</span>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4" aria-hidden="true">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="card space-y-3 p-4 sm:p-5">
+            {bar('h-10 w-10 rounded-xl')}
+            {bar('h-3 w-24')}
+            {bar('h-6 w-12')}
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3" aria-hidden="true">
+        <div className="card space-y-3 p-5 lg:col-span-2">
+          {bar('h-4 w-40')}
+          {[0, 1, 2, 3, 4].map((i) => (
+            <div key={i} className="grid grid-cols-3 gap-6">
+              {bar('h-3')}
+              {bar('h-3')}
+              {bar('h-3')}
+            </div>
+          ))}
+        </div>
+        <div className="card space-y-3 p-5">
+          {bar('h-4 w-28')}
+          {bar('h-3 w-full')}
+          {bar('h-3 w-2/3')}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /** The figures as tile descriptions: { to, icon, label, value | text, hint, tone, calm, calmText }. */
 function attentionItems(data) {
   const items = []
@@ -374,31 +556,27 @@ function attentionItems(data) {
 
 /** «الرئيسية»: what needs attention today, each part only for those allowed to see it. */
 export default function HomePage() {
-  const { user } = useAuth()
+  const { user, can } = useAuth()
   const { data, error, loadedAt, reload } = useHomeData()
   const now = useNow()
+  const editedGuide = useContentValue('guide.sections')
   const name = user ? user.first_name || displayName(user) : ''
   const items = data ? attentionItems(data) : []
+  const waiting = items.filter((i) => !i.calm).length
   const nothing = data && !items.length && !data.water && !data.circulars
+  // the tips follow the guide as edited from the dashboard (falling back to the default guide)
+  const editedTips = guideTips(editedGuide)
+  const tips = can('guide.view') ? (editedTips.length ? editedTips : guideTips(GUIDE_DEFAULT)) : []
+  const tip = tips.length > 0
+
+  let summary = 'جارٍ تجهيز ملخص اليوم…'
+  if (data && items.length) summary = waiting ? waitingSentence(waiting) : 'كل شيء على ما يرام اليوم، لا يوجد ما هو معلّق.'
+  else if (data && (data.water || data.circulars)) summary = 'إليك مواعيد المياه وآخر التعميمات لهذا اليوم.'
+  else if (data || error) summary = 'أهلاً بك في قسم المعلومات والشكاوي.'
 
   return (
-    <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-ink sm:text-[1.75rem]">
-          {greeting()}
-          {name && `، ${name}`}
-        </h1>
-        <p className="mt-1 flex flex-wrap items-center gap-x-2 text-sm text-muted">
-          هذا ما يحتاج انتباهك اليوم.
-          {loadedAt && (
-            <span className="inline-flex items-center gap-1.5 text-xs" aria-live="polite">
-              <span className={`h-1.5 w-1.5 rounded-full ${error ? 'bg-danger-600' : 'bg-brand-500'}`} aria-hidden="true" />
-              آخر تحديث {updatedAgo(loadedAt, now)}
-              {error && <span className="text-danger-700">(تعذر التحديث، سنحاول مجدداً)</span>}
-            </span>
-          )}
-        </p>
-      </header>
+    <div className="space-y-7">
+      <WelcomeBand name={name} summary={summary} loadedAt={loadedAt} now={now} error={error && Boolean(data)} />
 
       {!data && error ? (
         <EmptyState
@@ -411,8 +589,8 @@ export default function HomePage() {
           }
         />
       ) : !data ? (
-        <LoadingState />
-      ) : nothing ? (
+        <HomeSkeleton />
+      ) : nothing && !tip ? (
         <EmptyState
           icon={ShieldIcon}
           title="لا يوجد ما يُعرض هنا لحسابك"
@@ -422,10 +600,15 @@ export default function HomePage() {
         <>
           {items.length > 0 && <Attention items={items} />}
 
-          {(data.water || data.circulars) && (
+          {(data.water || data.circulars || tip) && (
             <div className="grid items-start gap-4 lg:grid-cols-3">
-              {data.water && <WaterPanel water={data.water} className={data.circulars ? 'lg:col-span-2' : 'lg:col-span-3'} />}
-              {data.circulars && <CircularsPanel circulars={data.circulars} className={data.water ? '' : 'lg:col-span-3'} />}
+              {data.water && <WaterPanel water={data.water} className={data.circulars || tip ? 'lg:col-span-2' : 'lg:col-span-3'} />}
+              {(data.circulars || tip) && (
+                <div className={`grid gap-4 ${data.water ? '' : 'lg:col-span-3 lg:grid-cols-2'}`}>
+                  {data.circulars && <CircularsPanel circulars={data.circulars} />}
+                  {tip && <CitizenTips tips={tips} />}
+                </div>
+              )}
             </div>
           )}
         </>

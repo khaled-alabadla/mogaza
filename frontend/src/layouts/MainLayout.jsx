@@ -40,6 +40,12 @@ export default function MainLayout() {
     })
   }, [])
 
+  // a new page opens at its top (the browser would keep the previous page's scroll position);
+  // changes within a page (filters, tabs, page number in the URL) don't move it
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [pathname])
+
   // close the drawer after navigating, and when the screen grows to the desktop layout
   useEffect(closeDrawer, [pathname, closeDrawer])
   useEffect(() => {
