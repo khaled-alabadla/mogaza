@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { authCan } from '../context/permissions'
-import { AlertIcon, BookIcon, ChartIcon, DropIcon, HomeIcon, InboxIcon, ListIcon, MegaphoneIcon, QuestionIcon, SearchIcon, UsersIcon } from './Icons'
+import { AlertIcon, BookIcon, GridIcon, ChartIcon, DropIcon, HomeIcon, InboxIcon, ListIcon, MegaphoneIcon, QuestionIcon, SearchIcon, UsersIcon } from './Icons'
 
 /**
  * The site's sections (sidebar + footer + route-guard fallbacks). Adding a page = adding one entry:
@@ -8,11 +8,13 @@ import { AlertIcon, BookIcon, ChartIcon, DropIcon, HomeIcon, InboxIcon, ListIcon
  * administrators. `short` is the compact label (collapsed sidebar tooltip).
  */
 export const NAV_SECTIONS = [
+  // «الرئيسية» on its own, above the sections (its title is for screen readers only)
+  { id: 'home', title: 'الرئيسية', hideTitle: true, links: [{ to: '/', label: 'الرئيسية', short: 'الرئيسية', icon: GridIcon }] },
   {
     id: 'services',
     title: 'الخدمات',
     links: [
-      { to: '/', label: 'البحث عن المواقع', short: 'البحث', icon: SearchIcon, perm: 'search.view' },
+      { to: '/search', label: 'البحث عن المواقع', short: 'البحث', icon: SearchIcon, perm: 'search.view' },
       { to: '/water', label: 'جدول المياه', short: 'المياه', icon: DropIcon, perm: 'water.view' },
       { to: '/guide', label: 'دليل القسم', short: 'الدليل', icon: BookIcon, perm: 'guide.view' },
       { to: '/committees', label: 'لجان الأحياء', short: 'اللجان', icon: HomeIcon, perm: 'committees.view' },

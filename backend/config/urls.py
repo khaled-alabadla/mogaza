@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 from apps.accounts.views import (ChangePasswordView, LoginView, LogoutView, MeView, PermissionCatalogView,
                                  UserViewSet)
 from apps.audit.views import AuditLogViewSet
+from apps.common.home import HomeView
 from apps.complaints.report_views import DailyReportView
 from apps.complaints.urgent_views import UrgentComplaintViewSet
 from apps.complaints.views import ComplaintViewSet
@@ -33,6 +34,7 @@ urlpatterns = [
     path("api/auth/permissions/", PermissionCatalogView.as_view(), name="auth-permissions"),
     path("api/auth/change-password/", ChangePasswordView.as_view(), name="auth-change-password"),
     path("api/daily-report/", DailyReportView.as_view(), name="daily-report"),
+    path("api/home/", HomeView.as_view(), name="home"),
     path("api/content/", ContentView.as_view(), name="content"),
     path("api/dev/otp/request/", OtpRequestView.as_view(), name="dev-otp-request"),
     path("api/dev/otp/verify/", OtpVerifyView.as_view(), name="dev-otp-verify"),

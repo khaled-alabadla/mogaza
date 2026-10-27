@@ -33,13 +33,15 @@ describe('visibleLinks', () => {
 
   it('follows the permission keys, the admin flag and public search', () => {
     expect(paths({ isAuthenticated: false, publicSearch: false })).toEqual([])
-    expect(paths({ isAuthenticated: false, publicSearch: true })).toEqual(['/', '/water'])
-    expect(paths(viewer)).toEqual(['/', '/water'])
-    expect(paths({ isAuthenticated: true, permissions: ['inquiries.view'] })).toEqual(['/inquiries'])
-    expect(paths({ isAuthenticated: true, permissions: ['guide.view'] })).toEqual(['/guide'])
-    expect(paths({ isAuthenticated: true, permissions: [] })).toEqual([])
+    // «الرئيسية» is for every signed-in user; signed-out visitors only get the public pages
+    expect(paths({ isAuthenticated: false, publicSearch: true })).toEqual(['/search', '/water'])
+    expect(paths(viewer)).toEqual(['/', '/search', '/water'])
+    expect(paths({ isAuthenticated: true, permissions: ['inquiries.view'] })).toEqual(['/', '/inquiries'])
+    expect(paths({ isAuthenticated: true, permissions: ['guide.view'] })).toEqual(['/', '/guide'])
+    expect(paths({ isAuthenticated: true, permissions: [] })).toEqual(['/'])
     expect(paths({ isAuthenticated: true, isAdmin: true, permissions: [] })).toEqual([
       '/',
+      '/search',
       '/water',
       '/guide',
       '/committees',
@@ -55,11 +57,12 @@ describe('visibleLinks', () => {
 
   it('uses auth.can when given, and groups the links in sections', () => {
     const can = (perm) => perm === 'complaints.view'
-    expect(paths({ isAuthenticated: true, can })).toEqual(['/complaints'])
-    expect(visibleSections(viewer).map((s) => s.title)).toEqual(['الخدمات'])
-    expect(visibleSections({ isAuthenticated: true, isAdmin: true }).map((s) => s.links.length)).toEqual([5, 4, 2])
-    expect(firstAllowedPath({ isAuthenticated: true, permissions: ['inquiries.view'] })).toBe('/inquiries')
-    expect(firstAllowedPath({ isAuthenticated: true, permissions: [] })).toBeNull()
+    expect(paths({ isAuthenticated: true, can })).toEqual(['/', '/complaints'])
+    expect(visibleSections(viewer).map((s) => s.title)).toEqual(['الرئيسية', 'الخدمات']) // «الرئيسية» on its own
+    expect(visibleSections({ isAuthenticated: true, isAdmin: true }).map((s) => s.links.length)).toEqual([1, 5, 4, 2])
+    expect(firstAllowedPath({ isAuthenticated: true, permissions: ['inquiries.view'] })).toBe('/')
+    expect(firstAllowedPath({ isAuthenticated: false, publicSearch: true })).toBe('/search')
+    expect(firstAllowedPath({ isAuthenticated: false })).toBeNull()
   })
 })
 
@@ -94,7 +97,8 @@ describe('RequirePermission', () => {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/login" element={<p>صفحة الدخول</p>} />
-          <Route path="/" element={guarded('search.view', 'صفحة البحث')} />
+          <Route path="/" element={<p>الرئيسية</p>} />
+          <Route path="/search" element={guarded('search.view', 'صفحة البحث')} />
           <Route path="/water" element={guarded('water.view', 'صفحة المياه')} />
           <Route path="/inquiries" element={guarded(['inquiries.view', 'inquiries.edit'], 'صفحة الاستفسارات')} />
         </Routes>
@@ -103,19 +107,19 @@ describe('RequirePermission', () => {
 
   it('renders the page when allowed', () => {
     auth.permissions = ['search.view']
-    renderAt('/')
+    renderAt('/search')
     expect(screen.getByText('صفحة البحث')).toBeInTheDocument()
   })
 
-  it('sends the user to the first page they may open (no loop when "/" is not allowed)', () => {
+  it('sends the user to the first page they may open: the home page', () => {
     auth.permissions = ['inquiries.view']
-    renderAt('/')
-    expect(screen.getByText('صفحة الاستفسارات')).toBeInTheDocument()
+    renderAt('/search')
+    expect(screen.getByText('الرئيسية')).toBeInTheDocument()
   })
 
-  it('shows «لا تملك صلاحية» when no page is allowed', () => {
-    auth.permissions = []
-    renderAt('/')
+  it('shows «لا تملك صلاحية» instead of redirecting to the page itself', async () => {
+    const { NoAccess } = await import('../components/RouteGuards')
+    render(<NoAccess />)
     expect(screen.getByRole('heading', { name: 'لا تملك صلاحية' })).toBeInTheDocument()
   })
 
@@ -145,7 +149,7 @@ describe('MainLayout', () => {
       <MemoryRouter initialEntries={['/']}>
         <Routes>
           <Route element={<MainLayout />}>
-            <Route index element={<p>محتوى البحث</p>} />
+            <Route index element={<p>محتوى الرئيسية</p>} />
             <Route path="water" element={<p>محتوى المياه</p>} />
             <Route path="inquiries" element={<p>محتوى الاستفسارات</p>} />
           </Route>
@@ -160,7 +164,8 @@ describe('MainLayout', () => {
     expect(within(nav).getByRole('link', { name: 'الاستفسارات' })).toBeInTheDocument()
     expect(within(nav).queryByRole('link', { name: 'الشكاوى' })).not.toBeInTheDocument()
     expect(within(nav).queryByRole('link', { name: 'المستخدمون' })).not.toBeInTheDocument()
-    expect(within(nav).getByRole('link', { name: 'البحث عن المواقع' })).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).getByRole('link', { name: 'الرئيسية' })).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).getByRole('link', { name: 'البحث عن المواقع' })).toHaveAttribute('href', '/search')
   })
 
   it('opens the mobile drawer and closes it on Escape, the backdrop, the close button and navigation', async () => {

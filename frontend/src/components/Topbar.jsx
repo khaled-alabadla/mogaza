@@ -62,10 +62,15 @@ const Topbar = forwardRef(function Topbar({ sections, hasNav, drawerOpen, onOpen
 
         {hasNav && current && (
           <p className="hidden min-w-0 items-center gap-2 text-sm lg:flex">
-            <span className="text-muted">{current.section.title}</span>
-            <span className="text-line" aria-hidden="true">
-              /
-            </span>
+            {/* «الرئيسية» stands alone (it isn't one of the services) */}
+            {current.link.to !== '/' && (
+              <>
+                <span className="text-muted">{current.section.title}</span>
+                <span className="text-line" aria-hidden="true">
+                  /
+                </span>
+              </>
+            )}
             <span className="truncate font-semibold text-ink" aria-current="page">
               {current.link.label}
             </span>

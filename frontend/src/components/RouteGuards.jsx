@@ -44,6 +44,19 @@ export function RequirePermission({ perm, children }) {
   return <Fallback auth={auth} />
 }
 
+/**
+ * The home page: signed-in users. A signed-out visitor goes to the public search when the server allows
+ * it, otherwise to the login page.
+ */
+export function RequireHome({ children }) {
+  const auth = useAuth()
+  const location = useLocation()
+  if (auth.loading) return <LoadingState />
+  if (auth.isAuthenticated) return children
+  if (isPublicPermission('search.view', auth.publicSearch)) return <Navigate to="/search" replace />
+  return <Navigate to="/login" replace state={{ from: location }} />
+}
+
 /** Search page (kept for older imports): same as <RequirePermission perm="search.view">. */
 export const RequireSearchAccess = ({ children }) => <RequirePermission perm="search.view">{children}</RequirePermission>
 

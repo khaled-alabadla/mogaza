@@ -106,4 +106,6 @@ export const dailyReportApi = {
   get: (signal) => api.get('/daily-report/', { signal }).then((r) => r.data),
   save: (report) => api.put('/daily-report/', report).then((r) => r.data),
 }
+/** «الرئيسية»: today's figures, only the parts the user may see. */
+export const homeApi = { get: (signal) => api.get('/home/', { signal }).then((r) => r.data) }
 export const auditApi = { list: crud('audit-logs').list }

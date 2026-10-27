@@ -42,6 +42,18 @@ describe('CircularsPage', () => {
     expect(screen.getByText('مثبّت')).toBeInTheDocument()
   })
 
+  it('opens on the circular asked for (from the home page), marked', async () => {
+    Element.prototype.scrollIntoView = vi.fn()
+    render(
+      <MemoryRouter initialEntries={['/circulars?open=1']}>
+        <CircularsPage />
+      </MemoryRouter>,
+    )
+    const card = (await screen.findByText('أعمدة الكهرباء')).closest('li')
+    expect(card).toHaveAttribute('aria-current', 'true')
+    await vi.waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalled())
+  })
+
   it('adds a pinned circular and searches', async () => {
     circularsApi.create.mockResolvedValue({})
     renderPage()

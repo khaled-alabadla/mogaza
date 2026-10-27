@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AddButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -109,11 +110,15 @@ function CopyButton({ text }) {
 const LONG_TEXT = 420
 
 /** One circular: icon, title, the text in a soft box, and a footer with its date and «نسخ النص». */
-function CircularCard({ circular: c, terms, canEdit, onEdit, onDelete }) {
+function CircularCard({ circular: c, terms, canEdit, onEdit, onDelete, focused }) {
   const long = c.body.length > LONG_TEXT || c.body.split('\n').length > 6
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(Boolean(focused)) // opened from the home page: shown in full
   return (
-    <li className={`card card-lift relative overflow-hidden ${c.pinned ? 'border-gold-400/60' : ''}`}>
+    <li
+      id={`circular-${c.id}`}
+      aria-current={focused ? 'true' : undefined}
+      className={`card card-lift relative scroll-mt-24 overflow-hidden ${c.pinned ? 'border-gold-400/60' : ''} ${focused ? 'ring-2 ring-brand-500' : ''}`}
+    >
       {c.pinned && <span className="absolute inset-x-0 top-0 h-1 bg-gold-400" aria-hidden="true" />}
       <div className="flex items-start gap-3.5 p-4 sm:p-5">
         <span
@@ -191,6 +196,12 @@ export default function CircularsPage() {
     return p
   }, [page, debounced])
   const { data, loading, error, reload } = usePagedList(circularsApi.list, params)
+  // «/circulars?open=5» (a circular clicked on the home page): bring it into view, marked
+  const [searchParams] = useSearchParams()
+  const focusId = Number(searchParams.get('open')) || null
+  useEffect(() => {
+    if (focusId && !loading) document.getElementById(`circular-${focusId}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+  }, [focusId, loading])
 
   const pinned = data.results.filter((c) => c.pinned)
   const rest = data.results.filter((c) => !c.pinned)
@@ -256,6 +267,7 @@ export default function CircularsPage() {
                     <CircularCard
                       key={c.id}
                       circular={c}
+                      focused={c.id === focusId}
                       terms={terms}
                       canEdit={canEdit}
                       onEdit={() => setEditing({ circular: c })}

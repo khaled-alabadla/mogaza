@@ -222,7 +222,7 @@ function TextsTab() {
 
 /** Everything else the developer account can manage: it holds every permission on these pages. */
 const MANAGE_LINKS = [
-  { to: '/', label: 'المواقع والشوارع', hint: 'إضافة وتعديل وحذف واستعادة المحذوف', icon: SearchIcon },
+  { to: '/search', label: 'المواقع والشوارع', hint: 'إضافة وتعديل وحذف واستعادة المحذوف', icon: SearchIcon },
   { to: '/water', label: 'جدول المياه', hint: 'المواعيد والمناطق ومصادر المياه', icon: DropIcon },
   { to: '/complaints', label: 'الشكاوى', hint: 'السجل المؤقت والتصدير', icon: InboxIcon },
   { to: '/inquiries', label: 'الاستفسارات', hint: 'السجل المؤقت والتصدير', icon: QuestionIcon },

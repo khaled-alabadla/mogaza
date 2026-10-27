@@ -182,7 +182,7 @@ export default function LoginPage() {
 
           {publicSearch && (
             <p className="mt-5 text-center text-sm">
-              <button type="button" className="font-medium text-brand-700 hover:underline" onClick={() => navigate('/')}>
+              <button type="button" className="font-medium text-brand-700 hover:underline" onClick={() => navigate('/search')}>
                 البحث بدون تسجيل دخول
               </button>
             </p>

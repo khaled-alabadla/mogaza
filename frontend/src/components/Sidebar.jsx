@@ -48,14 +48,14 @@ export function SidebarNav({ sections, collapsed = false }) {
           <h2
             id={`nav-${section.id}`}
             className={
-              collapsed
+              collapsed || section.hideTitle
                 ? 'sr-only'
                 : 'mb-1.5 px-3 text-[0.7rem] font-bold tracking-wide text-white/50'
             }
           >
             {section.title}
           </h2>
-          {collapsed && <hr className="mx-3 mb-2 border-white/10" aria-hidden="true" />}
+          {collapsed && !section.hideTitle && <hr className="mx-3 mb-2 border-white/10" aria-hidden="true" />}
           <ul className="space-y-0.5">
             {section.links.map(({ to, label, icon: Icon }) => (
               <li key={to}>

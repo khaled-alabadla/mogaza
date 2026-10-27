@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import LoadingState from './components/LoadingState'
-import { RequireAdmin, RequirePermission } from './components/RouteGuards'
+import { RequireAdmin, RequireHome, RequirePermission } from './components/RouteGuards'
 import { AuthProvider } from './context/AuthContext'
 import { ContentProvider } from './context/ContentContext'
 import { ToastProvider } from './context/ToastContext'
@@ -10,11 +10,14 @@ import MainLayout from './layouts/MainLayout'
 // every other page is its own chunk, downloaded the first time it is visited (see MainLayout's Suspense).
 import LoginPage from './pages/LoginPage'
 
+const loadHome = () => import('./pages/HomePage')
+const HomePage = lazy(loadHome)
 const loadDashboard = () => import('./pages/DashboardPage')
 const DashboardPage = lazy(loadDashboard)
-// Opening the site on the search page: download its code in parallel with the session check
+// Opening the site on the home / search page: download its code in parallel with the session check
 // instead of after it (the route guard renders the page only once /auth/me has answered).
-if (window.location.pathname === '/') loadDashboard()
+if (window.location.pathname === '/') loadHome()
+if (window.location.pathname === '/search') loadDashboard()
 const WaterSchedulePage = lazy(() => import('./pages/WaterSchedulePage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
 const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
@@ -70,6 +73,14 @@ export default function App() {
               <Route element={<MainLayout />}>
                 <Route
                   index
+                  element={
+                    <RequireHome>
+                      <HomePage />
+                    </RequireHome>
+                  }
+                />
+                <Route
+                  path="search"
                   element={
                     <RequirePermission perm="search.view">
                       <DashboardPage />
