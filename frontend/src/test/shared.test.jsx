@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { act, render, renderHook, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
@@ -125,5 +126,48 @@ describe('useConfirmAction', () => {
     expect(result.current.target).toEqual({ id: 3 })
     expect(result.current.busy).toBe(false)
     expect(screen.getByText('السجل المطلوب غير موجود أو تم حذفه.')).toBeInTheDocument()
+  })
+})
+
+describe('ErrorBoundary', () => {
+  it('shows «تعذر عرض الصفحة» with a reload button instead of a blank screen, and retries on another page', async () => {
+    const { default: ErrorBoundary } = await import('../components/ErrorBoundary')
+    const quiet = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const Broken = () => {
+      throw new Error('boom')
+    }
+    const { rerender } = render(
+      <ErrorBoundary resetKey="/a">
+        <Broken />
+      </ErrorBoundary>,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('تعذر عرض الصفحة')
+    expect(screen.getByRole('button', { name: 'تحديث الصفحة' })).toBeInTheDocument()
+    rerender(
+      <ErrorBoundary resetKey="/b">
+        <p>صفحة أخرى</p>
+      </ErrorBoundary>,
+    )
+    expect(screen.getByText('صفحة أخرى')).toBeInTheDocument()
+    quiet.mockRestore()
+  })
+})
+
+describe('lazyPage', () => {
+  it('reloads once when a page file of the previous build is gone', async () => {
+    const { lazyPage } = await import('../utils/lazyPage')
+    const reload = vi.fn()
+    const original = window.location
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, reload } })
+    window.sessionStorage.clear()
+    const Page = lazyPage(() => Promise.reject(new TypeError('Failed to fetch dynamically imported module')))
+    render(
+      <Suspense fallback={<p>تحميل</p>}>
+        <Page />
+      </Suspense>,
+    )
+    await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1))
+    expect(screen.getByText('تحميل')).toBeInTheDocument() // waits for the reload, no error shown
+    Object.defineProperty(window, 'location', { configurable: true, value: original })
   })
 })

@@ -1,5 +1,6 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import ErrorBoundary from '../components/ErrorBoundary'
 import Footer from '../components/Footer'
 import LoadingState from '../components/LoadingState'
 import { useNavSections } from '../components/navLinks'
@@ -72,12 +73,15 @@ export default function MainLayout() {
             content is momentarily short, and the footer would otherwise flash into view and jump away. */}
         <main className="mx-auto min-h-[calc(100svh-4.3rem)] w-full max-w-6xl flex-1 px-4 py-6 sm:py-8 lg:px-8 print:min-h-0 print:max-w-none print:p-0">
           {/* pages are lazy-loaded: keep the shell while a page's code downloads */}
-          <Suspense fallback={<LoadingState />}>
-            {/* a soft fade-in each time the page changes */}
-            <div key={pathname} className="page-enter">
-              <Outlet />
-            </div>
-          </Suspense>
+          {/* an error in a page keeps the sidebar and offers to reload; another page tries again */}
+          <ErrorBoundary resetKey={pathname}>
+            <Suspense fallback={<LoadingState />}>
+              {/* a soft fade-in each time the page changes */}
+              <div key={pathname} className="page-enter">
+                <Outlet />
+              </div>
+            </Suspense>
+          </ErrorBoundary>
         </main>
         <Footer />
       </div>
