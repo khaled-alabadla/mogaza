@@ -4,6 +4,7 @@ import drafts from '../assets/guide/drafts.webp'
 import population from '../assets/guide/population.webp'
 import { AlertIcon, ArrowLeftIcon, BulbIcon, CheckIcon, CloseIcon, CopyIcon, InfoIcon, RestoreIcon } from './Icons'
 import Modal from './Modal'
+import { copyText } from '../utils/clipboard'
 
 /*
  * The building blocks of «دليل القسم» (content in pages/guideSections.js). `onNavigate(section, stage)`
@@ -155,7 +156,7 @@ function Script({ title, lines, letter }) {
 
   async function copy() {
     try {
-      await navigator.clipboard.writeText(text)
+      await copyText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {

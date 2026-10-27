@@ -39,6 +39,18 @@ describe('CommitteesPage', () => {
     expect(screen.getByRole('link', { name: '0599419311' })).toHaveAttribute('href', 'tel:0599419311')
   })
 
+  it('copies a representative (name, committee, phone) in one click, for viewers too', async () => {
+    auth.perms = new Set(['committees.view'])
+    const user = userEvent.setup() // installs a clipboard to read back
+    renderPage()
+    await user.click(await screen.findByRole('button', { name: 'نسخ بيانات محمد جابر عبد العال' }))
+    expect(await navigator.clipboard.readText()).toBe(
+      'ممثل لجنة الحي: محمد جابر عبد العال\nاللجنة: لجنة حي الشجاعية\nرقم الجوال: 0599419311',
+    )
+    await user.click(screen.getByRole('button', { name: 'نسخ بيانات عادل الجزار' }))
+    expect(await navigator.clipboard.readText()).toBe('ممثل لجنة الحي: عادل الجزار\nاللجنة: لجنة حي المنارة') // no phone
+  })
+
   it('searches on the server', async () => {
     renderPage()
     await screen.findByText('محمد جابر عبد العال')

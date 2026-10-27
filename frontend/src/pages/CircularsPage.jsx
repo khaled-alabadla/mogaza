@@ -17,6 +17,7 @@ import useDebouncedValue from '../hooks/useDebouncedValue'
 import usePagedList from '../hooks/usePagedList'
 import { circularsApi } from '../services/api'
 import { formatDateTime } from '../utils/format'
+import { copyText } from '../utils/clipboard'
 
 const PAGE_SIZE = 20
 
@@ -88,7 +89,7 @@ function CopyButton({ text }) {
   const [copied, setCopied] = useState(false)
   async function copy() {
     try {
-      await navigator.clipboard.writeText(text)
+      await copyText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {

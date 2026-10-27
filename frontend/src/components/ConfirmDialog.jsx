@@ -1,11 +1,12 @@
 import Modal from './Modal'
 
-/** «هل أنت متأكد؟» before a deletion. Focus starts on «إلغاء» so Enter never deletes by accident. */
+/** «هل أنت متأكد؟» before a deletion (or another action: `confirmLabel`). Focus starts on «إلغاء» so Enter never deletes by accident. */
 export default function ConfirmDialog({
   open,
   title = 'تأكيد الحذف',
   message,
   details,
+  confirmLabel = 'حذف',
   busy = false,
   onConfirm,
   onCancel,
@@ -19,7 +20,7 @@ export default function ConfirmDialog({
           إلغاء
         </button>
         <button type="button" className="btn btn-danger" onClick={onConfirm} disabled={busy}>
-          {busy ? 'جارٍ التنفيذ…' : 'حذف'}
+          {busy ? 'جارٍ التنفيذ…' : confirmLabel}
         </button>
       </div>
     </Modal>

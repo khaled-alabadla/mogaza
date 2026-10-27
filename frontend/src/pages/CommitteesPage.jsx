@@ -3,7 +3,7 @@ import { AddButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from '../components/EmptyState'
-import { EditIcon, HomeIcon, TrashIcon } from '../components/Icons'
+import { CheckIcon, CopyIcon, EditIcon, HomeIcon, TrashIcon } from '../components/Icons'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
 import Pagination from '../components/Pagination'
@@ -15,6 +15,7 @@ import useConfirmAction from '../hooks/useConfirmAction'
 import useDebouncedValue from '../hooks/useDebouncedValue'
 import usePagedList from '../hooks/usePagedList'
 import { committeesApi } from '../services/api'
+import { copyText } from '../utils/clipboard'
 
 const PAGE_SIZE = 50
 
@@ -23,6 +24,30 @@ const FIELDS = [
   { name: 'committee', label: 'اسم اللجنة', required: true, maxLength: 200, third: true, placeholder: 'مثال: لجنة حي الزيتون' },
   { name: 'phone', label: 'رقم الجوال', maxLength: 16, numeric: true, inputMode: 'tel', third: true, placeholder: '0599123456' },
 ]
+
+/** «نسخ»: the representative's name, committee and phone, ready to paste for a citizen. */
+function CopyRepButton({ rep }) {
+  const toast = useToast()
+  const [copied, setCopied] = useState(false)
+  async function copy() {
+    const text = [`ممثل لجنة الحي: ${rep.name}`, `اللجنة: ${rep.committee}`, rep.phone && `رقم الجوال: ${rep.phone}`]
+      .filter(Boolean)
+      .join('\n')
+    try {
+      await copyText(text)
+      setCopied(true)
+      toast.success('تم نسخ بيانات الممثل.')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('تعذر النسخ، انسخ البيانات يدوياً.')
+    }
+  }
+  return (
+    <button type="button" className="icon-action" aria-label={`نسخ بيانات ${rep.name}`} title="نسخ الاسم واللجنة ورقم الجوال" onClick={copy}>
+      {copied ? <CheckIcon className="h-[1.1rem] w-[1.1rem] text-brand-600" /> : <CopyIcon className="h-[1.1rem] w-[1.1rem]" />}
+    </button>
+  )
+}
 
 const COLUMNS = 'sm:grid-cols-[2.5rem_minmax(0,1.2fr)_minmax(0,1.5fr)_9rem_auto]'
 
@@ -96,7 +121,7 @@ export default function CommitteesPage() {
             <span>الاسم</span>
             <span>اسم اللجنة</span>
             <span>رقم الجوال</span>
-            <span className="w-[4.5rem]" />
+            <span className="w-[7rem]" />
           </div>
           <ul className="divide-y divide-line">
             {data.results.map((rep, i) => (
@@ -116,7 +141,8 @@ export default function CommitteesPage() {
                     )}
                   </span>
                 </div>
-                <span className="flex w-[4.5rem] shrink-0 justify-end gap-0.5">
+                <span className="flex w-[7rem] shrink-0 justify-end gap-0.5">
+                  <CopyRepButton rep={rep} />
                   {canEdit && (
                     <>
                       <button type="button" className="icon-action" aria-label={`تعديل ${rep.name}`} title="تعديل" onClick={() => setEditing({ rep })}>

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import logo from '../assets/logo-320.webp'
 import FormAlert from '../components/FormAlert'
-import { CheckIcon, DownloadIcon, PlusIcon, PrintIcon, TrashIcon } from '../components/Icons'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { CheckIcon, DownloadIcon, PlusIcon, PrintIcon, RestoreIcon, TrashIcon } from '../components/Icons'
 import LoadingState from '../components/LoadingState'
 import PageHeader from '../components/PageHeader'
 import Tricolor from '../components/Tricolor'
@@ -17,6 +18,14 @@ const today = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
+
+/** «تصفير الحقول»: a new day: today's date, the same sources, every figure empty. */
+const clearedReport = (report) => ({
+  report_date: today(),
+  rows: report.rows.map((r) => ({ source: r.source, complaints: '', inquiries: '' })),
+  summons: '',
+  archived: '',
+})
 
 const emptyReport = () => ({
   report_date: today(),
@@ -142,6 +151,7 @@ export default function DailyReportPage() {
   const [meta, setMeta] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [confirmClear, setConfirmClear] = useState(false)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -165,6 +175,8 @@ export default function DailyReportPage() {
 
   const setRow = (i, row) => setReport({ ...report, rows: report.rows.map((r, j) => (j === i ? row : r)) })
   const dirty = JSON.stringify(report) !== saved
+  const hasFigures =
+    report.rows.some((r) => toNumber(r.complaints) || toNumber(r.inquiries)) || toNumber(report.summons) || toNumber(report.archived)
 
   async function save() {
     setBusy(true)
@@ -268,6 +280,15 @@ export default function DailyReportPage() {
               </label>
             </div>
 
+            <button
+              type="button"
+              className="btn btn-ghost-danger w-full"
+              disabled={!hasFigures}
+              onClick={() => setConfirmClear(true)}
+            >
+              <RestoreIcon className="h-4 w-4" /> تصفير الحقول
+            </button>
+
             <div className="flex items-center justify-between gap-3 border-t border-line pt-4">
               <p className="text-xs text-muted">
                 {dirty ? (
@@ -292,6 +313,18 @@ export default function DailyReportPage() {
           <ReportCard report={report} cardRef={cardRef} />
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmClear}
+        title="تصفير الحقول"
+        message="سيتم مسح كل الأرقام وتعيين تاريخ اليوم، مع بقاء أسماء المصادر. لن يتغير التقرير المحفوظ حتى تضغط «حفظ التقرير»."
+        confirmLabel="تصفير"
+        onConfirm={() => {
+          setReport(clearedReport(report))
+          setConfirmClear(false)
+        }}
+        onCancel={() => setConfirmClear(false)}
+      />
     </div>
   )
 }

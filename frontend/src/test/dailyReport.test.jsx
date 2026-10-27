@@ -77,6 +77,23 @@ describe('DailyReportPage', () => {
     )
   })
 
+  it('«تصفير الحقول» empties every figure (after confirming), keeps the sources, and saves nothing by itself', async () => {
+    renderPage()
+    await screen.findByDisplayValue('201')
+    await userEvent.click(screen.getByRole('button', { name: /تصفير الحقول/ }))
+    const dialog = screen.getByRole('dialog')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'إلغاء' }))
+    expect(screen.getByDisplayValue('201')).toBeInTheDocument() // cancelled: nothing changed
+    await userEvent.click(screen.getByRole('button', { name: /تصفير الحقول/ }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'تصفير' }))
+    expect(screen.queryByDisplayValue('201')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('المصدر 1')).toHaveValue('اتصال هاتفي')
+    expect(screen.getByLabelText('شكاوى اتصال هاتفي')).toHaveValue('')
+    expect(screen.getByRole('button', { name: /تصفير الحقول/ })).toBeDisabled() // nothing left to clear
+    expect(screen.getByText('● تعديلات غير محفوظة')).toBeInTheDocument()
+    expect(dailyReportApi.save).not.toHaveBeenCalled()
+  })
+
   it('starts from the usual sources before the first report, and viewers only see the report', async () => {
     dailyReportApi.get.mockResolvedValue({ report: null })
     auth.perms = new Set(['report.view'])
