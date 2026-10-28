@@ -87,7 +87,7 @@ class ListQueryCountTests(APITestCase):
         "/api/locations/?search=مسجد": 3,
         "/api/streets/?search=شارع": 2,            # count + page
         "/api/water-table/": 2,                    # rows + areas
-        "/api/users/": 2,                          # count + page
+        "/api/users/": 3,                          # count + page + every profile picture at once
         "/api/audit-logs/": 3,                     # hidden-superuser ids + count + page (no join)
         "/api/neighborhoods/": 1,                  # one annotated query
         "/api/water-zones/": 3,                    # count + page + slots
@@ -141,7 +141,7 @@ class ListQueryCountTests(APITestCase):
             f"/api/water-table/{DistributionGroup.objects.last().pk}/": 2,  # row + areas
             f"/api/neighborhoods/{zone.neighborhood_id}/": 1,
             f"/api/water-zones/{zone.pk}/": 3,                            # row + slots + locations
-            f"/api/users/{self.admin.pk}/": 1,
+            f"/api/users/{self.admin.pk}/": 2,  # the user + their profile picture
             f"/api/audit-logs/{AuditLog.objects.last().pk}/": 2,  # hidden-superuser ids + row
         }
         actual = {}

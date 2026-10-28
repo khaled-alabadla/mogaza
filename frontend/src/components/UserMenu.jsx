@@ -1,28 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { useToast } from '../context/ToastContext'
 import useDismiss from '../hooks/useDismiss'
 import { displayName } from '../utils/format'
-import ChangePasswordForm from './ChangePasswordForm'
-import { ChevronDownIcon, KeyIcon, LogoutIcon } from './Icons'
-import Modal from './Modal'
-
-/** The avatar letter: first letter of the name («بلال قنوع» → «ب»). */
-function initial(name) {
-  return String(name || '').trim().charAt(0) || '؟'
-}
+import Avatar from './Avatar'
+import { ChevronDownIcon, LogoutIcon, UserIcon } from './Icons'
 
 const itemClass =
   'tap flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-offset-0'
 
-/** Account button (avatar + name + role) with a small menu: change password, sign out. */
+/** Account button (avatar + name + role) with a small menu: the profile page, sign out. */
 export default function UserMenu() {
   const { user, loading, logout } = useAuth()
-  const toast = useToast()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
-  const [changing, setChanging] = useState(false)
   const buttonRef = useRef(null)
   const menuRef = useRef(null)
   const closeMenu = useCallback(() => setMenuOpen(false), [])
@@ -67,12 +58,7 @@ export default function UserMenu() {
           menuOpen ? 'bg-canvas' : ''
         }`}
       >
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-base font-bold text-white shadow-sm ring-2 ring-white"
-          aria-hidden="true"
-        >
-          {initial(name)}
-        </span>
+        <Avatar user={user} />
         <span className="hidden text-right leading-snug sm:block">
           <span className="block text-sm font-semibold text-ink">{name}</span>
           <span className="block text-xs text-muted">{user.role_display}</span>
@@ -100,13 +86,11 @@ export default function UserMenu() {
             className={`${itemClass} text-ink hover:bg-canvas focus-visible:bg-canvas`}
             onClick={() => {
               setMenuOpen(false)
-              // the item disappears with the menu: let the dialog return the focus to the account button
-              buttonRef.current?.focus()
-              setChanging(true)
+              navigate('/profile')
             }}
           >
-            <KeyIcon className="h-4 w-4 text-muted" />
-            تغيير كلمة المرور
+            <UserIcon className="h-4 w-4 text-muted" />
+            الملف الشخصي
           </button>
           <button
             type="button"
@@ -123,18 +107,6 @@ export default function UserMenu() {
           </button>
         </div>
       )}
-
-      <Modal open={changing} title="تغيير كلمة المرور" onClose={() => setChanging(false)} size="form">
-        {changing && (
-          <ChangePasswordForm
-            onCancel={() => setChanging(false)}
-            onDone={() => {
-              setChanging(false)
-              toast.success('تم تغيير كلمة المرور بنجاح.')
-            }}
-          />
-        )}
-      </Modal>
     </div>
   )
 }

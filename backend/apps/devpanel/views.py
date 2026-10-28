@@ -130,7 +130,8 @@ class ContentView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        return Response({row.key: row.value for row in SiteContent.objects.all()})
+        # profile pictures live in the same table («avatar:<id>»): never in this public list
+        return Response({row.key: row.value for row in SiteContent.objects.exclude(key__startswith="avatar:")})
 
 
 class ContentItemView(APIView):

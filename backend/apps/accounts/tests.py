@@ -406,3 +406,107 @@ class UserPermissionTests(APITestCase):
         self.assertEqual(res.data["permissions"], PERMISSION_KEYS)
         self.editor.refresh_from_db()
         self.assertIsNone(self.editor.permissions)
+
+
+class ProfileTests(APITestCase):
+    """«الملف الشخصي»: every user edits their own name, e-mail and username; nothing more."""
+
+    URL = "/api/auth/profile/"
+
+    def setUp(self):
+        self.viewer = User.objects.create_user("viewer1", password="S3cure-Pass-2026", role=User.Role.VIEWER)
+        User.objects.create_user("taken", password="S3cure-Pass-2026", email="taken@example.com")
+        self.client.force_authenticate(self.viewer)
+
+    def test_signed_in_only(self):
+        self.client.force_authenticate(None)
+        self.assertIn(self.client.patch(self.URL, {"first_name": "س"}).status_code, (401, 403))
+
+    def test_edits_name_and_email_without_password(self):
+        res = self.client.patch(self.URL, {"first_name": " سامي ", "last_name": "حسن", "email": "sami@example.com"})
+        self.assertEqual(res.status_code, 200, res.data)
+        self.viewer.refresh_from_db()
+        self.assertEqual((self.viewer.first_name, self.viewer.last_name, self.viewer.email), ("سامي", "حسن", "sami@example.com"))
+        self.assertEqual(res.data["user"]["first_name"], "سامي")
+        self.assertTrue(AuditLog.objects.filter(entity_type="user", entity_id=str(self.viewer.pk), action="UPDATE").exists())
+
+    def test_new_username_needs_the_current_password(self):
+        res = self.client.patch(self.URL, {"username": "sami"})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("current_password", res.data)
+        res = self.client.patch(self.URL, {"username": "sami", "current_password": "wrong"})
+        self.assertEqual(res.status_code, 400)
+        res = self.client.patch(self.URL, {"username": "sami", "current_password": "S3cure-Pass-2026"})
+        self.assertEqual(res.status_code, 200, res.data)
+        self.viewer.refresh_from_db()
+        self.assertEqual(self.viewer.username, "sami")
+
+    def test_unique_username_and_email(self):
+        res = self.client.patch(self.URL, {"username": "TAKEN", "current_password": "S3cure-Pass-2026"})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("username", res.data)
+        res = self.client.patch(self.URL, {"email": "Taken@example.com"})
+        self.assertEqual(res.status_code, 400)
+        self.assertIn("email", res.data)
+
+    def test_role_and_permissions_stay_the_admins(self):
+        res = self.client.patch(self.URL, {"role": "admin", "permissions": ["complaints.edit"], "is_superuser": True}, format="json")
+        self.assertEqual(res.status_code, 200)
+        self.viewer.refresh_from_db()
+        self.assertEqual(self.viewer.role, User.Role.VIEWER)
+        self.assertIsNone(self.viewer.permissions)
+        self.assertFalse(self.viewer.is_superuser)
+
+
+class AvatarTests(APITestCase):
+    """Profile pictures, kept in the content table under «avatar:<id>» (no table of their own)."""
+
+    # the smallest real files of each type (a 1×1 picture)
+    PNG = ("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=")
+    WEBP = "data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA"
+
+    def setUp(self):
+        self.user = User.objects.create_user("pic", password=PASSWORD, role=User.Role.VIEWER)
+        self.other = User.objects.create_user("other", password=PASSWORD, role=User.Role.VIEWER)
+        self.admin = User.objects.create_user("boss", password=PASSWORD, role=User.Role.ADMIN)
+        self.client.force_authenticate(self.user)
+
+    def test_upload_show_and_remove_own_picture(self):
+        res = self.client.put("/api/auth/avatar/", {"image": self.PNG}, format="json")
+        self.assertEqual(res.status_code, 200, res.data)
+        url = res.data["avatar"]
+        self.assertRegex(url, r"^/api/avatars/\d+/\?v=\d+$")
+        self.assertEqual(self.client.get("/api/auth/me/").data["user"]["avatar"], url)
+        img = self.client.get(url)
+        self.assertEqual(img.status_code, 200)
+        self.assertEqual(img["Content-Type"], "image/png")
+        self.assertTrue(img.content.startswith(b"\x89PNG"))
+        # other signed-in users see it; visitors don't
+        self.client.force_authenticate(self.other)
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.client.force_authenticate(None)
+        self.assertIn(self.client.get(url).status_code, (401, 403))
+        # never in the public content list
+        self.assertNotIn(f"avatar:{self.user.pk}", self.client.get("/api/content/").data)
+        self.client.force_authenticate(self.user)
+        self.assertEqual(self.client.delete("/api/auth/avatar/").status_code, 204)
+        self.assertIsNone(self.client.get("/api/auth/me/").data["user"]["avatar"])
+        self.assertEqual(self.client.get(url).status_code, 404)
+
+    def test_refuses_what_isnt_a_picture(self):
+        for image in ("hello", "data:text/html;base64,PGh0bWw+", "data:image/png;base64,PGh0bWw+",  # html renamed .png
+                      "data:image/svg+xml;base64,PHN2Zz4=", "data:image/png;base64," + "A" * 300_000):
+            res = self.client.put("/api/auth/avatar/", {"image": image}, format="json")
+            self.assertEqual(res.status_code, 400, image[:40])
+        self.assertEqual(self.client.put("/api/auth/avatar/", {"image": self.WEBP}, format="json").status_code, 200)
+
+    def test_admin_removes_someones_picture_and_sees_it_in_the_list(self):
+        self.client.put("/api/auth/avatar/", {"image": self.PNG}, format="json")
+        self.assertEqual(self.client.delete(f"/api/users/{self.user.pk}/avatar/").status_code, 403)  # not an admin
+        self.client.force_authenticate(self.admin)
+        listed = {u["username"]: u["avatar"] for u in self.client.get("/api/users/").data["results"]}
+        self.assertTrue(listed["pic"])
+        self.assertIsNone(listed["other"])
+        self.assertEqual(self.client.delete(f"/api/users/{self.user.pk}/avatar/").status_code, 204)
+        self.client.force_authenticate(self.user)
+        self.assertIsNone(self.client.get("/api/auth/me/").data["user"]["avatar"])

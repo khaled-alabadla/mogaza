@@ -46,6 +46,11 @@ export const authApi = {
   logout: () => api.post('/auth/logout/'),
   changePassword: (current_password, new_password) =>
     api.post('/auth/change-password/', { current_password, new_password }).then((r) => r.data),
+  /** «الملف الشخصي»: own name / e-mail / username (a new username needs current_password) → { user } */
+  updateProfile: (data) => api.patch('/auth/profile/', data).then((r) => r.data),
+  /** own profile picture: a small data URL (see utils/resizeImage) → { avatar }; remove → 204 */
+  setAvatar: (image) => api.put('/auth/avatar/', { image }).then((r) => r.data),
+  removeAvatar: () => api.delete('/auth/avatar/'),
   /** (admin) → { permissions: [{ key, label, group }], role_defaults: { admin: [...], editor: [...], viewer: [...] } } */
   permissions: (signal) => api.get('/auth/permissions/', { signal }).then((r) => r.data),
 }
@@ -81,7 +86,11 @@ export const locationsApi = restorable('locations')
 export const streetsApi = restorable('streets')
 export const committeesApi = restorable('committees')
 export const circularsApi = restorable('circulars')
-export const usersApi = crud('users')
+export const usersApi = {
+  ...crud('users'),
+  /** (admin) remove someone's profile picture */
+  removeAvatar: (id) => api.delete(`/users/${id}/avatar/`),
+}
 /** Neighborhoods (الأحياء): `list` returns a plain, non-paginated array. */
 export const neighborhoodsApi = crud('neighborhoods')
 /** Official water distribution table: `list` → { today, today_display, results: [...] } (not paginated). */

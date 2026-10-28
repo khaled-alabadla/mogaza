@@ -17,7 +17,7 @@ from apps.common.params import text_param
 
 from .models import PERMISSIONS, ROLE_DEFAULTS
 from .permissions import IsAdminRole
-from .serializers import ChangePasswordSerializer, CurrentUserSerializer, LoginSerializer, UserSerializer
+from .serializers import ChangePasswordSerializer, CurrentUserSerializer, LoginSerializer, ProfileSerializer, UserSerializer
 
 User = get_user_model()
 
@@ -87,6 +87,26 @@ class ChangePasswordView(APIView):
         return Response({"detail": "تم تغيير كلمة المرور بنجاح."})
 
 
+class ProfileView(APIView):
+    """
+    «الملف الشخصي»: any logged-in user edits their own name, e-mail and username
+    (PATCH /api/auth/profile/; a new username needs the current password). Audited like the admin's edits.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        user = request.user
+        before = user_snapshot(user)
+        serializer = ProfileSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        after = user_snapshot(user)
+        if after != before:
+            log_action(AuditLog.Action.UPDATE, request=request, entity=user, before=before, after=after)
+        return Response({"user": CurrentUserSerializer(user).data})
+
+
 class PermissionCatalogView(APIView):
     """The permissions an administrator can tick per user, and each role's defaults (admin only)."""
 
@@ -118,6 +138,13 @@ class UserViewSet(AuditedViewSetMixin, mixins.ListModelMixin, mixins.RetrieveMod
             qs = qs.filter(Q(username__icontains=search) | Q(first_name__icontains=search) |
                            Q(last_name__icontains=search) | Q(email__icontains=search))
         return qs
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.action == "list":  # one query for all the pictures, not one per user
+            from .avatars import avatar_versions
+            context["avatar_versions"] = avatar_versions()
+        return context
 
     def snapshot(self, instance):
         return user_snapshot(instance)

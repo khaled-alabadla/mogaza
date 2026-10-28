@@ -3,7 +3,8 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from apps.accounts.views import (ChangePasswordView, LoginView, LogoutView, MeView, PermissionCatalogView,
-                                 UserViewSet)
+                                 ProfileView, UserViewSet)
+from apps.accounts.avatars import AvatarImageView, MyAvatarView, UserAvatarView
 from apps.audit.views import AuditLogViewSet
 from apps.common.home import HomeView
 from apps.complaints.report_views import DailyReportView
@@ -33,6 +34,10 @@ urlpatterns = [
     path("api/auth/me/", MeView.as_view(), name="auth-me"),
     path("api/auth/permissions/", PermissionCatalogView.as_view(), name="auth-permissions"),
     path("api/auth/change-password/", ChangePasswordView.as_view(), name="auth-change-password"),
+    path("api/auth/profile/", ProfileView.as_view(), name="auth-profile"),
+    path("api/auth/avatar/", MyAvatarView.as_view(), name="auth-avatar"),
+    path("api/users/<int:pk>/avatar/", UserAvatarView.as_view(), name="user-avatar"),
+    path("api/avatars/<int:pk>/", AvatarImageView.as_view(), name="avatar-image"),
     path("api/daily-report/", DailyReportView.as_view(), name="daily-report"),
     path("api/home/", HomeView.as_view(), name="home"),
     path("api/content/", ContentView.as_view(), name="content"),

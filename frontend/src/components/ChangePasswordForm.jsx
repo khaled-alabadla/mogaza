@@ -11,7 +11,8 @@ const FIELDS = [
   ['confirm', 'تأكيد كلمة المرور الجديدة', 'new-password'],
 ]
 
-export default function ChangePasswordForm({ onDone, onCancel }) {
+/** `inline`: inside a page (the profile) rather than a dialog — a plain button row, no «إلغاء». */
+export default function ChangePasswordForm({ onDone, onCancel, inline = false }) {
   const [values, setValues] = useState({ current: '', next: '', confirm: '' })
   const { errors, formError, saving, submit } = useFormSubmit('تعذر تغيير كلمة المرور.')
 
@@ -48,7 +49,15 @@ export default function ChangePasswordForm({ onDone, onCancel }) {
         </Field>
       ))}
       <p className="text-xs text-muted">6 أحرف أو أرقام على الأقل.</p>
-      <FormActions saving={saving} submitLabel="تغيير كلمة المرور" onCancel={onCancel} />
+      {inline ? (
+        <div className="flex justify-end">
+          <button type="submit" className="btn btn-primary" disabled={saving || !values.current || !values.next}>
+            {saving ? 'جارٍ الحفظ…' : 'تغيير كلمة المرور'}
+          </button>
+        </div>
+      ) : (
+        <FormActions saving={saving} submitLabel="تغيير كلمة المرور" onCancel={onCancel} />
+      )}
     </form>
   )
 }

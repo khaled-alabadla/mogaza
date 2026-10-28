@@ -40,17 +40,66 @@ class ChangePasswordSerializer(serializers.Serializer):
         return value
 
 
+class ProfileSerializer(serializers.ModelSerializer):
+    """
+    «الملف الشخصي»: what a user may change on their own account (name, e-mail, username). A new username
+    needs the current password (it is what they sign in with). Role and permissions stay the admin's.
+    """
+
+    current_password = serializers.CharField(write_only=True, required=False, allow_blank=True, trim_whitespace=False)
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "first_name", "last_name", "current_password"]
+        extra_kwargs = {
+            "username": {"required": False, "error_messages": {"blank": "يرجى إدخال اسم المستخدم."}},
+            "email": {"required": False, "allow_blank": True},
+            "first_name": {"required": False, "allow_blank": True},
+            "last_name": {"required": False, "allow_blank": True},
+        }
+
+    def validate_username(self, value):
+        value = value.strip()
+        if exclude_instance(User.objects.filter(username__iexact=value), self.instance).exists():
+            raise serializers.ValidationError("اسم المستخدم مستخدم مسبقاً.")
+        return value
+
+    def validate_email(self, value):
+        value = (value or "").strip()
+        if value and exclude_instance(User.objects.filter(email__iexact=value), self.instance).exists():
+            raise serializers.ValidationError("البريد الإلكتروني مستخدم مسبقاً.")
+        return value
+
+    def validate(self, attrs):
+        password = attrs.pop("current_password", "")
+        new_username = attrs.get("username")
+        if new_username is not None and new_username.lower() != self.instance.username.lower():
+            if not password:
+                raise serializers.ValidationError({"current_password": "أدخل كلمة المرور الحالية لتغيير اسم المستخدم."})
+            if not self.instance.check_password(password):
+                raise serializers.ValidationError({"current_password": "كلمة المرور الحالية غير صحيحة."})
+        for field in ("first_name", "last_name"):
+            if field in attrs:
+                attrs[field] = attrs[field].strip()
+        return attrs
+
+
 class CurrentUserSerializer(serializers.ModelSerializer):
     role_display = serializers.CharField(source="get_role_display", read_only=True)
     # kept for older clients: = the «search.edit» permission
     can_edit = serializers.BooleanField(source="can_edit_locations", read_only=True)
     is_admin = serializers.BooleanField(source="is_admin_role", read_only=True)
     permissions = serializers.ListField(source="effective_permissions", read_only=True)
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ["id", "username", "email", "first_name", "last_name", "role", "role_display",
-                  "can_edit", "is_admin", "is_superuser", "permissions"]
+                  "can_edit", "is_admin", "is_superuser", "permissions", "avatar"]
+
+    def get_avatar(self, obj):
+        from .avatars import avatar_url
+        return avatar_url(obj.pk)
 
 
 class PermissionListField(serializers.Field):
@@ -91,17 +140,23 @@ class UserSerializer(serializers.ModelSerializer):
     permissions = PermissionListField()
     # whether `permissions` are the role's defaults (never customized)
     uses_role_defaults = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ["id", "username", "email", "first_name", "last_name", "role", "role_display",
                   "is_active", "is_superuser", "last_login", "date_joined", "password", "permissions",
-                  "uses_role_defaults"]
+                  "uses_role_defaults", "avatar"]
         read_only_fields = ["id", "is_superuser", "last_login", "date_joined"]
         extra_kwargs = {"email": {"required": False, "allow_blank": True}}
 
     def get_uses_role_defaults(self, obj):
         return obj.permissions is None
+
+    def get_avatar(self, obj):
+        # the list passes every picture's version at once («avatar_versions» in the context)
+        from .avatars import avatar_url
+        return avatar_url(obj.pk, self.context.get("avatar_versions"))
 
     def validate_username(self, value):
         value = value.strip()

@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary'
 import LoadingState from './components/LoadingState'
-import { RequireAdmin, RequireHome, RequirePermission } from './components/RouteGuards'
+import { RequireAdmin, RequireHome, RequirePermission, RequireSignedIn } from './components/RouteGuards'
 import { AuthProvider } from './context/AuthContext'
 import { ContentProvider } from './context/ContentContext'
 import { ToastProvider } from './context/ToastContext'
@@ -31,6 +31,7 @@ const UrgentComplaintsPage = lazyPage(() => import('./pages/UrgentComplaintsPage
 const DailyReportPage = lazyPage(() => import('./pages/DailyReportPage'))
 const ComplaintsReportPage = lazyPage(() => import('./pages/ComplaintsReportPage'))
 const UsersPage = lazyPage(() => import('./pages/UsersPage'))
+const ProfilePage = lazyPage(() => import('./pages/ProfilePage'))
 const AuditLogsPage = lazyPage(() => import('./pages/AuditLogsPage'))
 const NotFoundPage = lazyPage(() => import('./pages/NotFoundPage'))
 // the developer's hidden control panel («/dashboard»): linked from nowhere
@@ -167,6 +168,14 @@ export default function App() {
                       <RequirePermission perm="inquiries.view">
                         <InquiriesPage />
                       </RequirePermission>
+                    }
+                  />
+                  <Route
+                    path="profile"
+                    element={
+                      <RequireSignedIn>
+                        <ProfilePage />
+                      </RequireSignedIn>
                     }
                   />
                   <Route

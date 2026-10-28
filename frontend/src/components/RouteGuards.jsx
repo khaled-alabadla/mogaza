@@ -70,6 +70,9 @@ function RequireRole({ allowed, children }) {
   return children
 }
 
+/** Any signed-in user (the profile page). */
+export const RequireSignedIn = ({ children }) => <RequireRole allowed={() => true}>{children}</RequireRole>
+
 /** Admin-only pages (users, audit log). */
 export const RequireAdmin = ({ children }) => <RequireRole allowed={(a) => a.isAdmin}>{children}</RequireRole>
 

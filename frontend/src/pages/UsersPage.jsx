@@ -128,7 +128,7 @@ function PermissionsFieldset({ catalog, selected, disabled, onChange }) {
   )
 }
 
-function UserForm({ user, isSelf, catalog, onSubmit, onCancel }) {
+function UserForm({ user, isSelf, catalog, onSubmit, onCancel, onRemoveAvatar }) {
   const isEdit = Boolean(user)
   const [values, setValues] = useState({
     username: user?.username || '',
@@ -187,6 +187,16 @@ function UserForm({ user, isSelf, catalog, onSubmit, onCancel }) {
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <FormAlert message={formError} />
+      {/* an unsuitable profile picture can be removed here (the user can upload another) */}
+      {user?.avatar && (
+        <div className="flex items-center gap-3 rounded-xl bg-canvas p-3 ring-1 ring-line">
+          <img src={user.avatar} alt="" className="h-12 w-12 rounded-full object-cover ring-1 ring-line" />
+          <p className="flex-1 text-sm text-muted">صورة الملف الشخصي</p>
+          <button type="button" className="btn btn-ghost-danger py-1.5" onClick={onRemoveAvatar}>
+            إزالة الصورة
+          </button>
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         {field('username', 'اسم المستخدم *', { autoComplete: 'off', dir: 'ltr' })}
         {field('email', 'البريد الإلكتروني', { type: 'email', dir: 'ltr', autoComplete: 'off' })}
@@ -309,12 +319,16 @@ export default function UsersPage() {
                 }`}
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <span
-                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-bold ${AVATAR_TONES[u.role] || AVATAR_TONES.viewer}`}
-                    aria-hidden="true"
-                  >
-                    {displayName(u).trim().charAt(0).toUpperCase()}
-                  </span>
+                  {u.avatar ? (
+                    <img src={u.avatar} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover ring-1 ring-line" />
+                  ) : (
+                    <span
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-bold ${AVATAR_TONES[u.role] || AVATAR_TONES.viewer}`}
+                      aria-hidden="true"
+                    >
+                      {displayName(u).trim().charAt(0).toUpperCase()}
+                    </span>
+                  )}
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="truncate font-bold text-ink">{displayName(u)}</span>
@@ -386,6 +400,16 @@ export default function UsersPage() {
             catalog={catalog}
             onSubmit={save}
             onCancel={() => setEditing(null)}
+            onRemoveAvatar={async () => {
+              try {
+                await usersApi.removeAvatar(editing.user.id)
+                setEditing({ user: { ...editing.user, avatar: null } })
+                toast.success('تمت إزالة الصورة.')
+                reload()
+              } catch {
+                toast.error('تعذر إزالة الصورة.')
+              }
+            }}
           />
         )}
       </Modal>
