@@ -69,8 +69,9 @@ class LocationSerializer(TrackedSerializer):
         model = Location
         fields = ["id", "place_name", "description", "building_number", "street_number", "neighborhood",
                   "neighborhood_name", "water_zone", "water_zone_name", "water_schedule", "water_schedule_text", "is_active",
-                  "created_at", "updated_at", "created_by_name", "updated_by_name"]
-        read_only_fields = ["id", "is_active", "created_at", "updated_at"]
+                  "latitude", "longitude", "created_at", "updated_at", "created_by_name", "updated_by_name"]
+        # the coordinates (for «الخريطة») are shown, not edited from the site's form
+        read_only_fields = ["id", "is_active", "latitude", "longitude", "created_at", "updated_at"]
         extra_kwargs = {
             "place_name": {"error_messages": {"blank": "اسم المكان مطلوب.", "required": "اسم المكان مطلوب.",
                                               "max_length": "اسم المكان طويل جداً (الحد الأقصى 255 حرفاً)."}},

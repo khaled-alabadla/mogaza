@@ -325,3 +325,33 @@
 .water-map[data-tool='point'] .leaflet-interactive {
   cursor: crosshair;
 }
+
+/* the map search's pin and its card */
+.water-map .search-pin {
+  background: none;
+  border: 0;
+  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.3));
+}
+.water-map .search-card {
+  min-width: 12rem;
+  font-family: var(--font-sans);
+}
+.water-map .search-card p {
+  margin: 0;
+}
+.water-map .search-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.water-map .search-card-text {
+  margin-top: 0.2rem !important;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+.water-map .search-card-nums {
+  margin-top: 0.4rem !important;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-brand-700);
+}

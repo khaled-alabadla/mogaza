@@ -2,6 +2,7 @@ import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { useEffect, useRef, useState } from 'react'
 import neighborhoods from '../data/gazaNeighborhoods.json'
+import MapSearch from './MapSearch'
 import { CursorIcon, DrawIcon, ExtentIcon, HandIcon, PinPlusIcon, ZoomInIcon, ZoomOutIcon } from './Icons'
 
 /*
@@ -27,6 +28,39 @@ function scaleText(map) {
   const n = metresPerPx * (96 / 0.0254)
   const step = 10 ** Math.max(0, Math.floor(Math.log10(n)) - 1)
   return `1 : ${(Math.round(n / step) * step).toLocaleString('en-US')}`
+}
+
+/** The search result's pin: a green drop with a white dot (no image files to ship). */
+const PIN = L.divIcon({
+  className: 'search-pin',
+  html: '<svg viewBox="0 0 24 32" width="28" height="36" aria-hidden="true"><path d="M12 31s10-9.3 10-18A10 10 0 0 0 2 13c0 8.7 10 18 10 18z" fill="#0a6b38" stroke="#fff" stroke-width="2"/><circle cx="12" cy="13" r="4" fill="#fff"/></svg>',
+  iconSize: [28, 36],
+  iconAnchor: [14, 35],
+})
+
+/** The pin's card: name, then what is known (our location: description, building and street numbers). */
+function popupFor(result) {
+  const box = document.createElement('div')
+  box.className = 'search-card'
+  box.dir = 'rtl'
+  const line = (text, className) => {
+    if (!text) return
+    const p = document.createElement('p')
+    p.className = className
+    p.textContent = text
+    box.appendChild(p)
+  }
+  line(result.title, 'search-card-title')
+  if (result.kind === 'location') {
+    const l = result.details
+    line(l.description, 'search-card-text')
+    line(l.neighborhood_name && `الحي: ${l.neighborhood_name}`, 'search-card-text')
+    const numbers = [l.building_number && `رقم المبنى: ${l.building_number}`, l.street_number && `رقم الشارع: ${l.street_number}`]
+    line(numbers.filter(Boolean).join(' · '), 'search-card-nums')
+  } else {
+    line(result.subtitle, 'search-card-text')
+  }
+  return box
 }
 
 /** The toolbar: one tool at a time decides what a click / drag on the map does (grouped as in GIS tools). */
@@ -105,6 +139,19 @@ export default function WaterMap() {
       else if (toolRef.current === 'zoomOut') map.setZoomAround(latlng, map.getZoom() - 1)
     }
 
+    const byName = new Map() // neighborhood name → its shape (for the search box)
+    const pickHood = (name, poly) => {
+      unpick()
+      picked = { name, layer: poly }
+      for (const layer of layers) layer.setStyle(layer === poly ? PICKED : FADED)
+      poly.bringToFront()
+      boxRef.current?.setAttribute('data-picked', name)
+      // close enough to read the streets and places (a big neighborhood stays centred, partly in view)
+      const bounds = poly.getBounds()
+      const fit = map.getBoundsZoom(bounds, false, L.point(40, 40))
+      map.flyTo(bounds.getCenter(), Math.max(fit, READABLE_ZOOM), { duration: 0.8 })
+    }
+
     for (const n of neighborhoods.neighborhoods) {
       const poly = L.polygon(n.rings, STYLE).addTo(map)
       const selecting = () => toolRef.current === 'select'
@@ -115,16 +162,9 @@ export default function WaterMap() {
           zoomClick(e.latlng)
           return
         }
-        unpick()
-        picked = { name: n.name, layer: poly }
-        for (const layer of layers) layer.setStyle(layer === poly ? PICKED : FADED)
-        poly.bringToFront()
-        boxRef.current?.setAttribute('data-picked', n.name)
-        // close enough to read the streets and places (a big neighborhood stays centred, partly in view)
-        const bounds = poly.getBounds()
-        const fit = map.getBoundsZoom(bounds, false, L.point(40, 40))
-        map.flyTo(bounds.getCenter(), Math.max(fit, READABLE_ZOOM), { duration: 0.8 })
+        pickHood(n.name, poly)
       })
+      byName.set(n.name, poly)
       // no names drawn on the map (the map itself names the places): pointing at a neighborhood says its name
       poly.bindTooltip(n.name, { sticky: true, direction: 'top', offset: [0, -8], className: 'hood-tip' })
       layers.push(poly)
@@ -192,11 +232,32 @@ export default function WaterMap() {
     })
 
     if (import.meta.env.DEV) window.__waterMap = map // to inspect the map from the browser console while developing
+    let pin = null
     api.current = {
       map,
       home() {
         unpick()
+        pin?.remove()
         map.flyToBounds(city, { padding: [16, 16], duration: 0.8 })
+      },
+      show(result) {
+        pin?.remove()
+        pin = null
+        if (result.kind === 'neighborhood') {
+          const poly = byName.get(result.title)
+          if (poly) pickHood(result.title, poly)
+          return
+        }
+        unpick()
+        const at = L.latLng(result.lat, result.lng)
+        pin = L.marker(at, { icon: PIN, keyboard: false }).addTo(map).bindPopup(popupFor(result), { offset: [0, -30] })
+        const b = result.bounds // OpenStreetMap: [south, north, west, east] — a street or a big place
+        if (b && Math.abs(b[1] - b[0]) > 0.0015) {
+          map.flyToBounds([[b[0], b[2]], [b[1], b[3]]], { padding: [40, 40], maxZoom: 18, duration: 0.8 })
+        } else {
+          map.flyTo(at, 17, { duration: 0.8 })
+        }
+        map.once('moveend', () => pin?.openPopup())
       },
     }
 
@@ -236,8 +297,11 @@ export default function WaterMap() {
   }, [tool])
 
   return (
-    <div className="card overflow-hidden">
-      <div className="relative">
+    <div className="card overflow-visible">
+      <div className="border-b border-line px-3 py-2.5 sm:px-4">
+        <MapSearch neighborhoods={neighborhoods.neighborhoods} onPick={(r) => api.current.show?.(r)} />
+      </div>
+      <div className="relative overflow-hidden rounded-b-xl">
         {/* Leaflet lays its tiles out left-to-right */}
         <div
           ref={boxRef}

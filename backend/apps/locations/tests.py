@@ -356,3 +356,18 @@ class SearchPermissionTests(APITestCase):
         self.assertEqual(self.client.get("/api/water-table/").status_code, 200)
         self.assertEqual(self.client.post("/api/locations/", {"place_name": "x"}).status_code, 403)
         self.assertEqual(self.client.get("/api/complaints/").status_code, 403)
+
+
+class CoordinatesTests(LocationTestBase):
+    """The map places a location from its coordinates: shown in the list, never changed through the API."""
+
+    def test_listed_and_read_only(self):
+        self.council.latitude, self.council.longitude = "31.522500", "34.444000"
+        self.council.save()
+        row = next(r for r in self.search("مجلس", self.viewer).data["results"] if r["id"] == self.council.pk)
+        self.assertEqual((row["latitude"], row["longitude"]), ("31.522500", "34.444000"))
+        self.client.force_authenticate(self.editor)
+        res = self.client.patch(f"{URL}{self.council.pk}/", {"latitude": "1.000000", "place_name": "مجلس الوزراء"})
+        self.assertEqual(res.status_code, 200)
+        self.council.refresh_from_db()
+        self.assertEqual(str(self.council.latitude), "31.522500")
