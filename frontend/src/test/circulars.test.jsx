@@ -54,6 +54,21 @@ describe('CircularsPage', () => {
     await vi.waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalled())
   })
 
+  it('*text* between stars shows in bold, like WhatsApp (a phone inside stays a call link)', async () => {
+    circularsApi.list.mockResolvedValue(
+      page([{ ...CIRCULAR, body: 'وجّه المواطن *فوراً* إلى *الرقم 0595322040* ولا تنسَ 5 * 3 أو * هذا *' }]),
+    )
+    renderPage()
+    const bold = await screen.findByText('فوراً')
+    expect(bold.tagName).toBe('STRONG')
+    expect(bold.textContent).not.toContain('*')
+    const link = screen.getByRole('link', { name: '0595322040' })
+    expect(link.closest('strong')).not.toBeNull()
+    // a lone star, or stars around spaces, stay as they are
+    expect(document.querySelectorAll('li strong')).toHaveLength(2)
+    expect(screen.getByText(/5 \* 3 أو \* هذا \*/)).toBeInTheDocument()
+  })
+
   it('adds a pinned circular and searches', async () => {
     circularsApi.create.mockResolvedValue({})
     renderPage()

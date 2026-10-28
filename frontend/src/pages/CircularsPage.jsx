@@ -30,7 +30,7 @@ const FIELDS = [
     maxLength: 5000,
     multiline: true,
     rows: 7,
-    placeholder: 'ماذا يُقال للمواطن، وإلى أين يُوجَّه، وأرقام التواصل…',
+    placeholder: 'ماذا يُقال للمواطن، وإلى أين يُوجَّه، وأرقام التواصل…\nللخط العريض ضع النص بين نجمتين: *نص مهم*',
   },
   { name: 'pinned', label: 'تثبيت التعميم في أعلى الصفحة', type: 'checkbox' },
 ]
@@ -52,21 +52,37 @@ function Highlight({ text, terms }) {
   )
 }
 
-/** The circular's text, line breaks kept, phone numbers as «call» links, searched words marked. */
+// *نص* in bold, like WhatsApp: the stars touch the text (no space inside them) and stay on one line
+const BOLD = /\*(\S(?:[^*\n]*?\S)?)\*/
+
+/** Phone numbers as «call» links and the searched words marked, inside one piece of text. */
+function Inline({ text, terms }) {
+  return text.split(PHONE).map((part, i) =>
+    i % 2 ? (
+      <a
+        key={i}
+        href={`tel:${part}`}
+        className="num mx-0.5 inline-block rounded-md bg-white px-1.5 font-semibold leading-7 text-brand-700 ring-1 ring-brand-100 transition-colors hover:bg-brand-50"
+      >
+        {part}
+      </a>
+    ) : (
+      <Highlight key={i} text={part} terms={terms} />
+    ),
+  )
+}
+
+/** The circular's text: line breaks kept, *bold* parts, phone numbers as «call» links, searched words marked. */
 function Body({ text, terms, clamped }) {
   return (
     <p className={`text-[0.95rem] leading-8 whitespace-pre-line text-ink ${clamped ? 'line-clamp-5' : ''}`}>
-      {text.split(PHONE).map((part, i) =>
+      {text.split(BOLD).map((part, i) =>
         i % 2 ? (
-          <a
-            key={i}
-            href={`tel:${part}`}
-            className="num mx-0.5 inline-block rounded-md bg-white px-1.5 font-semibold leading-7 text-brand-700 ring-1 ring-brand-100 transition-colors hover:bg-brand-50"
-          >
-            {part}
-          </a>
+          <strong key={i} className="font-bold">
+            <Inline text={part} terms={terms} />
+          </strong>
         ) : (
-          <Highlight key={i} text={part} terms={terms} />
+          <Inline key={i} text={part} terms={terms} />
         ),
       )}
     </p>
