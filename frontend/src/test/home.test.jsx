@@ -46,7 +46,7 @@ beforeEach(() => {
 })
 
 describe('HomePage («الرئيسية»)', () => {
-  it('greets the user; what waits comes first as tiles, what is done as a small green line', async () => {
+  it('greets the user; four equal status boxes, what waits first and what is done last', async () => {
     renderHome()
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('محمد')
     const welcome = screen.getByRole('region', { name: 'ترحيب' })
@@ -59,15 +59,18 @@ describe('HomePage («الرئيسية»)', () => {
     expect(tiles[0]).toHaveAccessibleName(/^شكاوى عاجلة لم تُحل\s*3\s*الأقدم/)
     expect(within(attention).getByText('الأقدم مقدمة منذ 12 يوم')).toBeInTheDocument()
     expect(within(attention).getByText('لم يُحدَّث اليوم')).toBeInTheDocument()
-    expect(tiles[3]).toHaveTextContent('كلها مرفوعة') // nothing pending: the small line
+    expect(tiles[3]).toHaveTextContent('كلها مرفوعة') // nothing pending: a green tick, last
     expect(screen.getByText(/آخر تحديث الآن/)).toBeInTheDocument()
     expect(screen.queryByRole('searchbox')).not.toBeInTheDocument()
   })
 
-  it('says so in one line when nothing is waiting', async () => {
+  it('nothing waiting: every box shows a green tick, and the welcome says the day is fine', async () => {
     homeApi.get.mockResolvedValue({ urgent: { open: 0, oldest_days: null }, complaints: { pending: 0 } })
     renderHome()
-    expect(await screen.findByText('ما في شي معلّق اليوم')).toBeInTheDocument()
+    const attention = await screen.findByRole('region', { name: 'يحتاج انتباهك' })
+    expect(within(attention).getAllByRole('link')).toHaveLength(2)
+    expect(within(attention).getByText('لا يوجد')).toBeInTheDocument()
+    expect(within(attention).getByText('كلها مرفوعة')).toBeInTheDocument()
     expect(screen.getByText('كل شيء على ما يرام اليوم، لا يوجد ما هو معلّق.')).toBeInTheDocument()
   })
 

@@ -31,10 +31,10 @@ const SOURCES = [
 const SOURCE_DOTS = Object.fromEntries(SOURCES.map((s) => [s.value, s.dot]))
 const AREAS_SHOWN = 24 // on large screens
 const AREAS_SHOWN_PHONE = 10 // on phones, so the circulars below stay close
-const TIPS_SHOWN = 5
+const TIPS_SHOWN = 6 // two even rows of three on a wide screen
 const REPORT_DATE = new Intl.DateTimeFormat('ar-u-nu-latn', { weekday: 'long', day: 'numeric', month: 'long' })
 // the waiting tiles always fill their row (no empty slot beside two tiles)
-const TILE_COLUMNS = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-2 lg:grid-cols-3', 4: 'grid-cols-2 lg:grid-cols-4' }
+const TILE_COLUMNS = { 1: 'grid-cols-1 sm:grid-cols-2', 2: 'grid-cols-2', 3: 'grid-cols-2 lg:grid-cols-3', 4: 'grid-cols-2 lg:grid-cols-4' }
 const byArabicName = (a, b) => a.name.localeCompare(b.name, 'ar')
 
 // «الثلاثاء، 27 أكتوبر» and «5 جمادى الأولى 1448 هـ» (Western digits, like the rest of the site)
@@ -173,103 +173,50 @@ function CountUp({ value }) {
 }
 
 /**
- * One «needs attention» tile: an icon, a label, the figure (or a short text), a hint; links to its page.
- * `wide` (one or two tiles in the row): laid out on one line, the figure at the far end.
+ * One status box (they all look alike, whatever their state): an icon, a label, then either the figure
+ * waiting (a coloured stripe on top: red for the urgent complaints, gold for the rest) or a green ✓
+ * when nothing waits. Links to its page.
  */
-function AttentionTile({ to, icon: Icon, label, value, text, hint, tone, wide }) {
-  const tones = { danger: 'bg-danger-50 text-danger-700', gold: 'bg-gold-100 text-gold-700' }
-  const figure = text ? (
-    <p className={`text-sm font-bold text-gold-700 sm:text-base ${wide ? '' : 'mt-1'}`}>{text}</p>
-  ) : (
-    <p className={`text-2xl font-bold text-ink sm:text-3xl ${wide ? '' : 'mt-0.5'}`}>
-      <CountUp value={value} />
-    </p>
-  )
-  const icon = (
-    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tones[tone]} ${wide ? 'sm:h-12 sm:w-12' : ''}`}>
-      <Icon className="h-5 w-5" />
-    </span>
-  )
-  const arrow = (
-    <ArrowLeftIcon className="h-4 w-4 shrink-0 text-gray-300 transition-transform group-hover:-translate-x-1 group-hover:text-brand-600" />
-  )
-
-  if (wide) {
-    return (
-      <Link to={to} className="card card-lift group flex flex-col gap-2.5 p-3.5 sm:flex-row sm:items-center sm:gap-4 sm:p-5">
-        <div className="flex items-center justify-between gap-2 sm:contents">
-          {icon}
-          <span className="sm:hidden">{arrow}</span>
-        </div>
-        <div className="min-w-0 sm:flex-1">
-          <p className="text-xs font-semibold text-muted sm:text-sm">{label}</p>
-          {hint && <p className="mt-1 hidden text-xs text-muted sm:block">{hint}</p>}
-        </div>
-        {figure}
-        {hint && <p className="text-xs text-muted sm:hidden">{hint}</p>}
-        <span className="hidden sm:block">{arrow}</span>
-      </Link>
-    )
+function StatusTile({ to, icon: Icon, label, value, text, hint, tone, calm, calmText }) {
+  const tones = {
+    danger: { tile: 'bg-danger-50 text-danger-700', stripe: 'bg-danger-600', text: 'text-danger-700' },
+    gold: { tile: 'bg-gold-100 text-gold-700', stripe: 'bg-gold-400', text: 'text-gold-700' },
   }
+  const look = tones[tone]
   return (
-    <Link to={to} className="card card-lift group flex flex-col gap-2.5 p-3.5 sm:gap-3 sm:p-5">
+    <Link to={to} className="card card-lift group relative flex flex-col gap-3 overflow-hidden p-4 sm:p-5">
+      {!calm && <span className={`absolute inset-x-0 top-0 h-1 ${look.stripe}`} aria-hidden="true" />}
       <div className="flex items-center justify-between gap-2">
-        {icon}
-        {arrow}
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${calm ? 'bg-brand-50 text-brand-700' : look.tile}`}>
+          {calm ? <CheckIcon className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
+        </span>
+        <ArrowLeftIcon className="h-4 w-4 shrink-0 text-gray-300 transition-transform group-hover:-translate-x-1 group-hover:text-brand-600" />
       </div>
-      <div>
+      <div className="flex flex-1 flex-col">
         <p className="text-xs font-semibold text-muted sm:text-sm">{label}</p>
-        {figure}
-        {hint && <p className="mt-1 text-xs text-muted">{hint}</p>}
+        {calm ? (
+          <p className="mt-1 text-base font-bold text-brand-700 sm:text-lg">{calmText}</p>
+        ) : text ? (
+          <p className={`mt-1 text-base font-bold sm:text-lg ${look.text}`}>{text}</p>
+        ) : (
+          <p className="mt-0.5 text-2xl font-bold text-ink sm:text-3xl">
+            <CountUp value={value} />
+          </p>
+        )}
+        {hint && <p className="mt-auto pt-1.5 text-xs text-muted">{hint}</p>}
       </div>
     </Link>
   )
 }
 
-/** A part with nothing waiting: a small green line (links to its page too). */
-function CalmItem({ to, label, calmText }) {
-  return (
-    <Link
-      to={to}
-      className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm ring-1 ring-brand-100 transition-colors hover:bg-brand-50"
-    >
-      <CheckIcon className="h-4 w-4 text-brand-600" />
-      <span className="text-muted">{label}:</span>
-      <span className="font-semibold text-brand-700">{calmText}</span>
-    </Link>
-  )
-}
-
-/** What needs attention first (the tiles), then what is already done (small green lines). */
+/** The status boxes, all the same size in one row: what waits first, then what is done. */
 function Attention({ items }) {
-  const waiting = items.filter((i) => !i.calm)
-  const calm = items.filter((i) => i.calm)
+  const ordered = [...items.filter((i) => !i.calm), ...items.filter((i) => i.calm)]
   return (
-    <section aria-label="يحتاج انتباهك" className="space-y-3">
-      {waiting.length > 0 ? (
-        <div className={`stagger grid gap-3 ${TILE_COLUMNS[Math.min(waiting.length, 4)]}`}>
-          {waiting.map((t) => (
-            <AttentionTile key={t.to} {...t} wide={waiting.length <= 2} />
-          ))}
-        </div>
-      ) : (
-        <div className="card flex items-center gap-3 border-brand-100 bg-brand-50/60 p-4 sm:p-5">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white">
-            <CheckIcon className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="font-bold text-brand-800">ما في شي معلّق اليوم</p>
-            <p className="text-sm text-muted">كل الشكاوى والاستفسارات مرفوعة، والتقرير اليومي محدَّث.</p>
-          </div>
-        </div>
-      )}
-      {waiting.length > 0 && calm.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {calm.map((t) => (
-            <CalmItem key={t.to} {...t} />
-          ))}
-        </div>
-      )}
+    <section aria-label="يحتاج انتباهك" className={`stagger grid auto-rows-fr gap-3 ${TILE_COLUMNS[Math.min(ordered.length, 4)]}`}>
+      {ordered.map((t) => (
+        <StatusTile key={t.to} {...t} />
+      ))}
     </section>
   )
 }
@@ -456,7 +403,7 @@ function CitizenTips({ tips }) {
         <BulbIcon className="h-5 w-5 text-gold-700" />
         نصائح للتعامل مع المواطن
       </h2>
-      <ul className="mt-3 space-y-2">
+      <ul className="mt-3 grid gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
         {tips.slice(0, TIPS_SHOWN).map((tip) => (
           <li key={tip} className="flex items-start gap-2 text-sm leading-6 text-ink">
             <CheckIcon className="mt-1 h-4 w-4 shrink-0 text-brand-600" />
@@ -594,17 +541,14 @@ export default function HomePage() {
         <>
           {items.length > 0 && <Attention items={items} />}
 
-          {(data.water || data.circulars || tip) && (
-            <div className="grid items-start gap-4 lg:grid-cols-3">
-              {data.water && <WaterPanel water={data.water} className={data.circulars || tip ? 'lg:col-span-2' : 'lg:col-span-3'} />}
-              {(data.circulars || tip) && (
-                <div className={`grid gap-4 ${data.water ? '' : 'lg:col-span-3 lg:grid-cols-2'}`}>
-                  {data.circulars && <CircularsPanel circulars={data.circulars} />}
-                  {tip && <CitizenTips tips={tips} />}
-                </div>
-              )}
+          {/* water and circulars side by side, the same height; the citizen tips across the page below */}
+          {(data.water || data.circulars) && (
+            <div className="grid gap-4 lg:grid-cols-3">
+              {data.water && <WaterPanel water={data.water} className={data.circulars ? 'lg:col-span-2' : 'lg:col-span-3'} />}
+              {data.circulars && <CircularsPanel circulars={data.circulars} className={data.water ? '' : 'lg:col-span-3'} />}
             </div>
           )}
+          {tip && <CitizenTips tips={tips} />}
         </>
       )}
     </div>
