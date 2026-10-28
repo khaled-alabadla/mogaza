@@ -232,3 +232,74 @@ describe('WaterSchedulePage', () => {
     expect(waterTableApi.remove).toHaveBeenCalledWith(1)
   })
 })
+
+const { default: MapPage } = await import('../pages/MapPage')
+const renderMap = () =>
+  render(
+    <MemoryRouter initialEntries={['/map']}>
+      <MapPage />
+    </MemoryRouter>,
+  )
+
+describe('«الخريطة» page', () => {
+  it('shows the neighborhoods of the paper map on the real map; a click picks one and zooms in', async () => {
+    renderMap()
+    expect(screen.getByRole('heading', { name: 'الخريطة' })).toBeInTheDocument()
+    const map = await screen.findByRole('region', { name: 'خريطة أحياء مدينة غزة' }, { timeout: 5000 })
+    const shapes = map.querySelectorAll('path.leaflet-interactive')
+    expect(shapes).toHaveLength(20) // the 20 neighborhoods of the PDF
+    shapes[0].dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(map).toHaveAttribute('data-picked', 'الزيتون') // the biggest one comes first
+    // no credit line under the map: OpenStreetMap's credit sits behind «ⓘ»
+    expect(screen.queryByText(/حدود الأحياء/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'OpenStreetMap' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'مصدر الخريطة' }))
+    expect(screen.getByRole('link', { name: 'OpenStreetMap' })).toHaveAttribute('href', 'https://www.openstreetmap.org/copyright')
+  })
+
+  it('one tool at a time: select (default), zoom in / out, pan, and draw / add a point (coming soon)', async () => {
+    renderMap()
+    const map = await screen.findByRole('region', { name: 'خريطة أحياء مدينة غزة' }, { timeout: 5000 })
+    const toolbar = screen.getByRole('toolbar', { name: 'أدوات الخريطة' })
+    const tool = (name) => within(toolbar).getByRole('button', { name })
+    expect(tool('تحديد')).toHaveAttribute('aria-pressed', 'true')
+    for (const name of ['تكبير', 'تصغير', 'تحريك', 'رسم', 'إضافة نقطة']) expect(tool(name)).toHaveAttribute('aria-pressed', 'false')
+    expect(within(toolbar).getByRole('button', { name: 'عرض المدينة كاملة' })).toBeInTheDocument()
+
+    // with the hand, a click on a neighborhood only moves the map: nothing gets picked
+    await userEvent.click(tool('تحريك'))
+    expect(tool('تحريك')).toHaveAttribute('aria-pressed', 'true')
+    expect(tool('تحديد')).toHaveAttribute('aria-pressed', 'false')
+    expect(map).toHaveAttribute('data-tool', 'pan')
+    map.querySelector('path.leaflet-interactive').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(map).not.toHaveAttribute('data-picked')
+
+    await userEvent.click(tool('رسم'))
+    expect(screen.getByText('أداة الرسم ستُفعَّل قريباً')).toBeInTheDocument()
+    await userEvent.click(tool('إضافة نقطة'))
+    expect(screen.getByText('إضافة النقاط ستُفعَّل قريباً')).toBeInTheDocument()
+
+    await userEvent.click(tool('تحديد'))
+    map.querySelector('path.leaflet-interactive').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(map).toHaveAttribute('data-picked')
+  })
+})
+
+describe('gazaNeighborhoods.json (built from the PDF)', () => {
+  it('has the 20 neighborhoods inside Gaza City, each with a closed outline and a label', async () => {
+    const { default: data } = await import('../data/gazaNeighborhoods.json')
+    expect(data.neighborhoods.map((n) => n.name)).toEqual(expect.arrayContaining(['الرمال الشمالي', 'البلدة القديمة', 'الشيخ رضوان']))
+    expect(data.neighborhoods).toHaveLength(20)
+    for (const n of data.neighborhoods) {
+      const points = n.rings.flat()
+      expect(points.length).toBeGreaterThan(3)
+      for (const [lat, lon] of [...points, n.label]) {
+        // Gaza City: about 31.45–31.56 N, 34.40–34.51 E
+        expect(lat).toBeGreaterThan(31.44)
+        expect(lat).toBeLessThan(31.57)
+        expect(lon).toBeGreaterThan(34.39)
+        expect(lon).toBeLessThan(34.52)
+      }
+    }
+  })
+})

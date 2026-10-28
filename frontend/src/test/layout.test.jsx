@@ -34,8 +34,8 @@ describe('visibleLinks', () => {
   it('follows the permission keys, the admin flag and public search', () => {
     expect(paths({ isAuthenticated: false, publicSearch: false })).toEqual([])
     // «الرئيسية» is for every signed-in user; signed-out visitors only get the public pages
-    expect(paths({ isAuthenticated: false, publicSearch: true })).toEqual(['/search', '/water'])
-    expect(paths(viewer)).toEqual(['/', '/search', '/water'])
+    expect(paths({ isAuthenticated: false, publicSearch: true })).toEqual(['/search', '/water', '/map'])
+    expect(paths(viewer)).toEqual(['/', '/search', '/water', '/map'])
     expect(paths({ isAuthenticated: true, permissions: ['inquiries.view'] })).toEqual(['/', '/inquiries'])
     expect(paths({ isAuthenticated: true, permissions: ['guide.view'] })).toEqual(['/', '/guide'])
     expect(paths({ isAuthenticated: true, permissions: [] })).toEqual(['/'])
@@ -43,6 +43,7 @@ describe('visibleLinks', () => {
       '/',
       '/search',
       '/water',
+      '/map',
       '/guide',
       '/committees',
       '/circulars',
@@ -59,7 +60,7 @@ describe('visibleLinks', () => {
     const can = (perm) => perm === 'complaints.view'
     expect(paths({ isAuthenticated: true, can })).toEqual(['/', '/complaints'])
     expect(visibleSections(viewer).map((s) => s.title)).toEqual(['الرئيسية', 'الخدمات']) // «الرئيسية» on its own
-    expect(visibleSections({ isAuthenticated: true, isAdmin: true }).map((s) => s.links.length)).toEqual([1, 5, 4, 2])
+    expect(visibleSections({ isAuthenticated: true, isAdmin: true }).map((s) => s.links.length)).toEqual([1, 6, 4, 2])
     expect(firstAllowedPath({ isAuthenticated: true, permissions: ['inquiries.view'] })).toBe('/')
     expect(firstAllowedPath({ isAuthenticated: false, publicSearch: true })).toBe('/search')
     expect(firstAllowedPath({ isAuthenticated: false })).toBeNull()

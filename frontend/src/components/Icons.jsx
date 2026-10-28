@@ -250,3 +250,45 @@ export const GridIcon = (p) => (
     <rect x="13" y="13" width="7" height="7" rx="1.5" />
   </Svg>
 )
+export const CursorIcon = (p) => (
+  <Svg {...p}>
+    <path d="M5 3l14 7.5-6.2 1.8L10 18.5z" />
+  </Svg>
+)
+export const ZoomInIcon = (p) => (
+  <Svg {...p}>
+    <circle cx="10.5" cy="10.5" r="6.5" />
+    <path d="M20 20l-4.6-4.6M10.5 7.5v6M7.5 10.5h6" />
+  </Svg>
+)
+export const ZoomOutIcon = (p) => (
+  <Svg {...p}>
+    <circle cx="10.5" cy="10.5" r="6.5" />
+    <path d="M20 20l-4.6-4.6M7.5 10.5h6" />
+  </Svg>
+)
+export const HandIcon = (p) => (
+  <Svg {...p}>
+    <path d="M8 12V5.5a1.5 1.5 0 0 1 3 0V11M11 10V4.5a1.5 1.5 0 0 1 3 0V11M14 10.5V6a1.5 1.5 0 0 1 3 0v7.5c0 4-2.5 7-6.2 7-2.6 0-4-1.2-5.6-3.4L3.4 14a1.5 1.5 0 0 1 2.3-1.9L8 14" />
+  </Svg>
+)
+export const DrawIcon = (p) => (
+  <Svg {...p}>
+    <path d="M4 17.5l4.5-5 4 3.5 6-8" />
+    <circle cx="4" cy="17.5" r="1.4" />
+    <circle cx="8.5" cy="12.5" r="1.4" />
+    <circle cx="12.5" cy="16" r="1.4" />
+    <circle cx="18.5" cy="8" r="1.4" />
+  </Svg>
+)
+export const PinPlusIcon = (p) => (
+  <Svg {...p}>
+    <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z" />
+    <path d="M12 7.2v5.6M9.2 10h5.6" />
+  </Svg>
+)
+export const ExtentIcon = (p) => (
+  <Svg {...p}>
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </Svg>
+)

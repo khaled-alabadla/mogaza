@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { authCan } from '../context/permissions'
-import { AlertIcon, BookIcon, GridIcon, ChartIcon, DropIcon, HomeIcon, InboxIcon, ListIcon, MegaphoneIcon, QuestionIcon, SearchIcon, UsersIcon } from './Icons'
+import { AlertIcon, BookIcon, GridIcon, MapIcon, ChartIcon, DropIcon, HomeIcon, InboxIcon, ListIcon, MegaphoneIcon, QuestionIcon, SearchIcon, UsersIcon } from './Icons'
 
 /**
  * The site's sections (sidebar + footer + route-guard fallbacks). Adding a page = adding one entry:
@@ -16,6 +16,7 @@ export const NAV_SECTIONS = [
     links: [
       { to: '/search', label: 'البحث عن المواقع', short: 'البحث', icon: SearchIcon, perm: 'search.view' },
       { to: '/water', label: 'جدول المياه', short: 'المياه', icon: DropIcon, perm: 'water.view' },
+      { to: '/map', label: 'الخريطة', short: 'الخريطة', icon: MapIcon, perm: 'water.view' },
       { to: '/guide', label: 'دليل القسم', short: 'الدليل', icon: BookIcon, perm: 'guide.view' },
       { to: '/committees', label: 'لجان الأحياء', short: 'اللجان', icon: HomeIcon, perm: 'committees.view' },
       { to: '/circulars', label: 'تعميمات', short: 'تعميمات', icon: MegaphoneIcon, perm: 'circulars.view' },

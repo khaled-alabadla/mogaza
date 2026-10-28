@@ -269,3 +269,59 @@
     animation: none;
   }
 }
+
+/* Water map (Leaflet): the site's font. */
+.water-map {
+  font-family: var(--font-sans);
+}
+/* a clicked neighborhood takes the browser's focus: no focus box around it (it isn't reached by keyboard) */
+.water-map path.leaflet-interactive:focus {
+  outline: none;
+}
+/* the neighborhood's name on hover */
+.water-map .hood-tip {
+  font-family: var(--font-sans);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-brand-800);
+  border: 1px solid rgb(10 107 56 / 0.35);
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
+}
+.water-map .leaflet-control-scale-line {
+  border-color: var(--color-brand-700);
+  color: var(--color-ink);
+  background: rgb(255 255 255 / 0.85);
+  font-family: var(--font-sans);
+}
+/* The cursor follows the map tool (over the map and over the neighborhoods alike). */
+.water-map[data-tool='select'],
+.water-map[data-tool='select'] .leaflet-interactive {
+  cursor: default;
+}
+.water-map[data-tool='select'] path.leaflet-interactive {
+  cursor: pointer;
+}
+.water-map[data-tool='pan'],
+.water-map[data-tool='pan'] .leaflet-interactive {
+  cursor: grab;
+}
+.water-map[data-tool='pan'].leaflet-dragging,
+.water-map[data-tool='pan'].leaflet-dragging .leaflet-interactive {
+  cursor: grabbing;
+}
+.water-map[data-tool='zoomIn'],
+.water-map[data-tool='zoomIn'] .leaflet-interactive {
+  cursor: zoom-in;
+}
+.water-map[data-tool='zoomOut'],
+.water-map[data-tool='zoomOut'] .leaflet-interactive {
+  cursor: zoom-out;
+}
+.water-map[data-tool='draw'],
+.water-map[data-tool='draw'] .leaflet-interactive,
+.water-map[data-tool='point'],
+.water-map[data-tool='point'] .leaflet-interactive {
+  cursor: crosshair;
+}

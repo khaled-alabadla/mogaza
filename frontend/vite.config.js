@@ -25,8 +25,9 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           // Third-party code changes rarely: a separate chunk stays cached across app deploys.
+          // Leaflet stays out of it: only the water map uses it, so it loads with that page's chunk.
           manualChunks(id) {
-            if (id.includes('node_modules') && !id.endsWith('.css')) return 'vendor'
+            if (id.includes('node_modules') && !id.endsWith('.css') && !id.includes('node_modules/leaflet/')) return 'vendor'
           },
         },
       },

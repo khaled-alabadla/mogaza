@@ -21,6 +21,7 @@ const DashboardPage = lazyPage(loadDashboard)
 if (window.location.pathname === '/') loadHome().catch(() => {}) // a failure is handled when the page renders
 if (window.location.pathname === '/search') loadDashboard().catch(() => {})
 const WaterSchedulePage = lazyPage(() => import('./pages/WaterSchedulePage'))
+const MapPage = lazyPage(() => import('./pages/MapPage'))
 const ComplaintsPage = lazyPage(() => import('./pages/ComplaintsPage'))
 const InquiriesPage = lazyPage(() => import('./pages/InquiriesPage'))
 const GuidePage = lazyPage(() => import('./pages/GuidePage'))
@@ -101,6 +102,14 @@ export default function App() {
                     element={
                       <RequirePermission perm="water.view">
                         <WaterSchedulePage />
+                      </RequirePermission>
+                    }
+                  />
+                  <Route
+                    path="map"
+                    element={
+                      <RequirePermission perm="water.view">
+                        <MapPage />
                       </RequirePermission>
                     }
                   />
