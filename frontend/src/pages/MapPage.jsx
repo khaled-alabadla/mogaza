@@ -9,7 +9,7 @@ const WaterMap = lazy(() => import('../components/WaterMap'))
 export default function MapPage() {
   return (
     <div>
-      <PageHeader title="الخريطة" subtitle="أحياء مدينة غزة على الخريطة." />
+      <PageHeader title="الخريطة" subtitle="أحياء مدينة غزة ومواقعنا ومعالمها على الخريطة." />
       <Suspense fallback={<LoadingState label="جارٍ تحميل الخريطة…" />}>
         <WaterMap />
       </Suspense>

@@ -12,6 +12,7 @@ from apps.audit.models import AuditLog
 
 from .models import Location, StreetName
 from .text import normalize_for_search
+from .testing import full_location
 
 URL = "/api/locations/"
 
@@ -115,7 +116,7 @@ class AnonymousAccessTests(LocationTestBase):
 
     @override_settings(PUBLIC_SEARCH_ENABLED=True)
     def test_anonymous_can_never_mutate(self):
-        self.assertEqual(self.client.post(URL, {"place_name": "x"}).status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(self.client.post(URL, full_location(**{"place_name": "x"})).status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(self.client.patch(f"{URL}{self.council.pk}/", {"place_name": "x"}).status_code, 403)
         self.assertEqual(self.client.delete(f"{URL}{self.council.pk}/").status_code, 403)
         self.council.refresh_from_db()
@@ -128,7 +129,7 @@ class CrudTests(LocationTestBase):
 
     def test_full_lifecycle_as_editor(self):
         self.client.force_authenticate(self.editor)
-        res = self.client.post(URL, self.payload)
+        res = self.client.post(URL, full_location(**self.payload))
         self.assertEqual(res.status_code, status.HTTP_201_CREATED, res.data)
         pk = res.data["id"]
 
@@ -165,7 +166,7 @@ class CrudTests(LocationTestBase):
 
     def test_viewer_cannot_mutate(self):
         self.client.force_authenticate(self.viewer)
-        self.assertEqual(self.client.post(URL, self.payload).status_code, 403)
+        self.assertEqual(self.client.post(URL, full_location(**self.payload)).status_code, 403)
         self.assertEqual(self.client.patch(f"{URL}{self.council.pk}/", {"place_name": "x"}).status_code, 403)
         self.assertEqual(self.client.put(f"{URL}{self.council.pk}/", self.payload).status_code, 403)
         self.assertEqual(self.client.delete(f"{URL}{self.council.pk}/").status_code, 403)
@@ -177,29 +178,38 @@ class CrudTests(LocationTestBase):
         self.editor.is_active = False
         self.editor.save()
         self.client.force_authenticate(self.editor)
-        self.assertEqual(self.client.post(URL, self.payload).status_code, 403)
+        self.assertEqual(self.client.post(URL, full_location(**self.payload)).status_code, 403)
 
     def test_duplicates_allowed(self):
         self.client.force_authenticate(self.admin)
-        self.assertEqual(self.client.post(URL, self.payload).status_code, 201)
-        self.assertEqual(self.client.post(URL, self.payload).status_code, 201)
+        self.assertEqual(self.client.post(URL, full_location(**self.payload)).status_code, 201)
+        self.assertEqual(self.client.post(URL, full_location(**self.payload)).status_code, 201)
         self.assertEqual(self.client.get(URL, {"search": "مسجد الوحدة"}).data["count"], 2)
 
     def test_validation(self):
         self.client.force_authenticate(self.editor)
-        res = self.client.post(URL, {"place_name": "   "})
+        res = self.client.post(URL, full_location(**{"place_name": "   "}))
         self.assertEqual(res.status_code, 400)
         self.assertIn("place_name", res.data)
-        res = self.client.post(URL, {"place_name": "x", "building_number": "<script>"})
+        res = self.client.post(URL, full_location(**{"place_name": "x", "building_number": "<script>"}))
         self.assertEqual(res.status_code, 400)
         self.assertIn("building_number", res.data)
-        res = self.client.post(URL, {"place_name": "x", "street_number": "1" * 21})
+        res = self.client.post(URL, full_location(**{"place_name": "x", "street_number": "1" * 21}))
         self.assertEqual(res.status_code, 400)
+
+    def test_every_field_required_when_adding(self):
+        self.client.force_authenticate(self.editor)
+        res = self.client.post(URL, {"place_name": "مسجد ناقص", "building_number": "5"})
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(set(res.data), {"description", "street_number", "neighborhood"})
+        # an older location with blanks can still be edited without filling them
+        res = self.client.patch(f"{URL}{self.council.pk}/", {"place_name": "مجلس الوزراء الفلسطيني"})
+        self.assertEqual(res.status_code, 200)
 
     def test_whitespace_trimmed_and_leading_zeros_preserved(self):
         self.client.force_authenticate(self.editor)
-        res = self.client.post(URL, {"place_name": "  مفترق   تجريبي  ", "building_number": "00123",
-                                     "street_number": " 0050 "})
+        res = self.client.post(URL, full_location(**{"place_name": "  مفترق   تجريبي  ", "building_number": "00123",
+                                     "street_number": " 0050 "}))
         self.assertEqual(res.status_code, 201)
         self.assertEqual(res.data["place_name"], "مفترق تجريبي")
         self.assertEqual(res.data["building_number"], "00123")
@@ -340,10 +350,10 @@ class SearchPermissionTests(APITestCase):
         self.assertEqual(self.client.get("/api/neighborhoods/").status_code, 200)  # names: read by every page
         self.as_user(["search.view"])
         self.assertEqual(self.client.get("/api/locations/").status_code, 200)
-        self.assertEqual(self.client.post("/api/locations/", {"place_name": "x"}).status_code, 403)
+        self.assertEqual(self.client.post("/api/locations/", full_location(**{"place_name": "x"})).status_code, 403)
         self.assertEqual(self.client.post("/api/neighborhoods/", {"name": "حي"}).status_code, 403)
         self.as_user(["search.view", "search.edit"])
-        self.assertEqual(self.client.post("/api/locations/", {"place_name": "x"}).status_code, 201)
+        self.assertEqual(self.client.post("/api/locations/", full_location(**{"place_name": "x"})).status_code, 201)
         self.as_user(["inquiries.view"])
         self.assertEqual(self.client.get("/api/neighborhoods/").status_code, 200)
         self.assertEqual(self.client.get("/api/locations/").status_code, 403)
@@ -354,20 +364,41 @@ class SearchPermissionTests(APITestCase):
         self.assertEqual(self.client.get("/api/locations/", {"search": "بلدية"}).data["count"], 1)
         self.assertEqual(self.client.get("/api/streets/").status_code, 200)
         self.assertEqual(self.client.get("/api/water-table/").status_code, 200)
-        self.assertEqual(self.client.post("/api/locations/", {"place_name": "x"}).status_code, 403)
+        self.assertEqual(self.client.post("/api/locations/", full_location(**{"place_name": "x"})).status_code, 403)
         self.assertEqual(self.client.get("/api/complaints/").status_code, 403)
 
 
 class CoordinatesTests(LocationTestBase):
-    """The map places a location from its coordinates: shown in the list, never changed through the API."""
+    """The map places a location from its coordinates; «إضافة نقطة» sets them (inside Gaza City only)."""
 
-    def test_listed_and_read_only(self):
+    def test_listed_and_kept_by_the_search_form(self):
         self.council.latitude, self.council.longitude = "31.522500", "34.444000"
         self.council.save()
         row = next(r for r in self.search("مجلس", self.viewer).data["results"] if r["id"] == self.council.pk)
         self.assertEqual((row["latitude"], row["longitude"]), ("31.522500", "34.444000"))
         self.client.force_authenticate(self.editor)
-        res = self.client.patch(f"{URL}{self.council.pk}/", {"latitude": "1.000000", "place_name": "مجلس الوزراء"})
+        res = self.client.patch(f"{URL}{self.council.pk}/", {"place_name": "مجلس الوزراء"})  # the form sends no coordinates
         self.assertEqual(res.status_code, 200)
         self.council.refresh_from_db()
         self.assertEqual(str(self.council.latitude), "31.522500")
+
+    def test_a_point_added_from_the_map(self):
+        self.client.force_authenticate(self.editor)
+        res = self.client.post(URL, full_location(**{"place_name": "مسجد جديد", "building_number": "12", "street_number": "3040",
+                                     "latitude": "31.512345", "longitude": "34.456789"}), format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual((res.data["latitude"], res.data["longitude"]), ("31.512345", "34.456789"))
+        # outside the city, or only one of the two
+        for bad in ({"latitude": "31.9", "longitude": "34.45"}, {"latitude": "31.51"}):
+            res = self.client.post(URL, full_location(**{"place_name": "خطأ", **bad}), format="json")
+            self.assertEqual(res.status_code, 400, bad)
+
+    def test_points_for_the_map(self):
+        self.council.latitude, self.council.longitude = "31.522500", "34.444000"
+        self.council.save()
+        self.client.force_authenticate(self.viewer)
+        res = self.client.get(f"{URL}points/")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual([(p["id"], p["latitude"], p["building_number"]) for p in res.data], [(self.council.pk, 31.5225, "95")])
+        self.client.force_authenticate(None)
+        self.assertIn(self.client.get(f"{URL}points/").status_code, (401, 403))

@@ -82,7 +82,11 @@ function restorable(resource) {
   return { ...crud(resource), restore: (id) => api.post(`/${resource}/${id}/restore/`).then((r) => r.data) }
 }
 
-export const locationsApi = restorable('locations')
+export const locationsApi = {
+  ...restorable('locations'),
+  /** «الخريطة»: every location that has coordinates (not paginated) */
+  points: (signal) => api.get('/locations/points/', { signal }).then((r) => r.data),
+}
 export const streetsApi = restorable('streets')
 export const committeesApi = restorable('committees')
 export const circularsApi = restorable('circulars')

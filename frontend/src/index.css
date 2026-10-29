@@ -332,26 +332,204 @@
   border: 0;
   filter: drop-shadow(0 2px 3px rgb(0 0 0 / 0.3));
 }
+.water-map .search-popup .leaflet-popup-content-wrapper {
+  border-radius: 1rem;
+  padding: 0;
+  box-shadow: 0 12px 32px -8px rgb(10 60 35 / 0.35), 0 0 0 1px rgb(10 107 56 / 0.08);
+  overflow: hidden;
+}
+.water-map .search-popup .leaflet-popup-content {
+  margin: 0;
+  width: auto !important;
+}
+.water-map .search-popup .leaflet-popup-tip {
+  box-shadow: none;
+}
+.water-map .search-popup .leaflet-popup-close-button {
+  inset-inline-start: auto;
+  left: 0.35rem;
+  right: auto;
+  top: 0.45rem;
+  color: rgb(255 255 255 / 0.85);
+}
+.water-map .search-popup .leaflet-popup-close-button:hover {
+  color: #fff;
+}
 .water-map .search-card {
-  min-width: 12rem;
+  width: 16rem;
+  max-width: calc(100vw - 4rem);
   font-family: var(--font-sans);
+  padding-bottom: 0.75rem;
 }
 .water-map .search-card p {
   margin: 0;
 }
+.water-map .search-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 0.85rem 0.75rem 2rem;
+  background: linear-gradient(135deg, #0a6b38, #2f8a57);
+  color: #fff;
+}
+.water-map .search-card-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.18);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25);
+}
+.water-map .search-card-names {
+  min-width: 0;
+}
 .water-map .search-card-title {
   font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: #fff;
+}
+.water-map .search-card-badge {
+  display: inline-block;
+  margin-top: 0.2rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
   font-weight: 700;
-  color: var(--color-ink);
+  background: rgb(255 255 255 / 0.2);
+  color: #fff;
+}
+.water-map .search-card-badge.is-ours {
+  background: #fff;
+  color: #0a6b38;
 }
 .water-map .search-card-text {
-  margin-top: 0.2rem !important;
+  padding: 0.65rem 0.85rem 0;
   font-size: 0.8rem;
+  line-height: 1.6;
   color: var(--color-muted);
 }
-.water-map .search-card-nums {
-  margin-top: 0.4rem !important;
-  font-size: 0.8rem;
+.water-map .search-card-hood {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.85rem 0;
+  font-size: 0.82rem;
   font-weight: 600;
+  color: var(--color-ink);
+}
+.water-map .search-card-hood-label {
+  padding: 0.05rem 0.45rem;
+  border-radius: 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: var(--color-brand-50);
   color: var(--color-brand-700);
+}
+.water-map .search-card-nums {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem 0;
+}
+.water-map .search-card-num {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0.5rem 0.4rem;
+  border-radius: 0.75rem;
+  background: var(--color-brand-50);
+  box-shadow: inset 0 0 0 1px rgb(10 107 56 / 0.12);
+}
+.water-map .search-card-num-label {
+  white-space: nowrap;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+.water-map .search-card-num-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #0a6b38;
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+}
+.water-map .search-card:not(:has(.search-card-text, .search-card-hood, .search-card-nums)) {
+  padding-bottom: 0;
+}
+.water-map .search-popup:not(:has(.search-card-text, .search-card-hood, .search-card-nums)) .leaflet-popup-tip {
+  background: #1d7c49;
+}
+
+/* the city's places on the map: a small round badge per kind */
+.water-map .place-icon {
+  background: none;
+  border: 0;
+}
+.water-map .place-icon span {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.35);
+  transition: transform 0.15s;
+}
+.water-map .place-icon:hover span {
+  transform: scale(1.2);
+}
+
+/* the card's copy buttons (one under each number) */
+.water-map .search-card-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  border: 0;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgb(10 107 56 / 0.2);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #0a6b38;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.water-map .search-card-copy:hover {
+  background: #0a6b38;
+  color: #fff;
+}
+.water-map .search-card-copy.is-done {
+  background: #0a6b38;
+  color: #fff;
+}
+
+/* full screen: the map fills it */
+/* full screen: the search box on top, the map filling the rest */
+.map-card:fullscreen {
+  display: flex;
+  flex-direction: column;
+  border-radius: 0;
+  background: #fff;
+}
+.map-card:fullscreen .map-shell {
+  flex: 1;
+  min-height: 0;
+  border-radius: 0;
+}
+.map-card:fullscreen .water-map {
+  height: 100%;
+}
+/* the satellite picture: the neighborhood lines in white so they show on it */
+.water-map[data-base='satellite'] .leaflet-overlay-pane path.leaflet-interactive {
+  stroke: #ffffff;
+  stroke-opacity: 0.8;
 }

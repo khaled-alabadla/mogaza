@@ -17,6 +17,7 @@ from apps.water.serializers import slot_data
 
 from .params import bool_param, int_param, text_param
 from .validation import exclude_instance, required_text
+from apps.locations.testing import full_location
 
 
 def request_with(query):
@@ -150,11 +151,12 @@ class ListQueryCountTests(APITestCase):
                 self.assertEqual(self.client.get(url).status_code, 200, url)
             actual[url] = len(ctx.captured_queries)
         self.assertEqual(actual, expected)
-        # create with a zone: zone + its slots (one query for both schedule fields) + insert + audit
+        # create with a zone: neighborhood + zone + its slots (one query for both schedule fields) + insert + audit
+        body = full_location(place_name="موقع", water_zone=zone.pk)
         with CaptureQueriesContext(connection) as ctx:
-            res = self.client.post("/api/locations/", {"place_name": "موقع", "water_zone": zone.pk}, format="json")
+            res = self.client.post("/api/locations/", body, format="json")
         self.assertEqual(res.data["water_schedule_text"], "السبت، الثلاثاء 08:00–10:00")
-        self.assertEqual(len(ctx.captured_queries), 4)
+        self.assertEqual(len(ctx.captured_queries), 5)
 
 
 class BadQueryParamTests(APITestCase):

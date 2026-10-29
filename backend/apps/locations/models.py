@@ -90,6 +90,8 @@ class Location(TrackedModel):
             "neighborhood_name": self.neighborhood.name if self.neighborhood_id else None,
             "water_zone": self.water_zone_id,
             "water_zone_name": self.water_zone.display_name if self.water_zone_id else None,
+            "latitude": str(self.latitude) if self.latitude is not None else None,
+            "longitude": str(self.longitude) if self.longitude is not None else None,
             "is_active": self.is_active,
         }
 

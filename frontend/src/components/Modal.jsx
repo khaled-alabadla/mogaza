@@ -10,7 +10,11 @@ const WIDTHS = { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-4xl' }
     past which the fields scroll and the save / cancel buttons stay at the bottom. */
 const FORM_PANEL = 'flex max-h-[min(88dvh,46rem)] max-w-3xl flex-col overflow-hidden'
 
-export default function Modal({ open, title, onClose, children, size = 'md' }) {
+/**
+ * `container`: where the dialog is placed (default <body>) — e.g. the map while it fills the screen,
+ * since only what is inside a full-screen element can be seen.
+ */
+export default function Modal({ open, title, onClose, children, size = 'md', container }) {
   const panelRef = useRef(null)
   const titleId = useId()
   // Read the latest onClose from a ref: parents pass inline functions, and re-running the effect
@@ -62,7 +66,7 @@ export default function Modal({ open, title, onClose, children, size = 'md' }) {
 
   // Portal to <body> so an ancestor (e.g. the blurred sticky header) can't trap the fixed overlay.
   return createPortal(
-    <div className="modal-backdrop fixed inset-0 z-40 flex items-end justify-center bg-brand-800/30 p-0 backdrop-blur-[2px] sm:items-center sm:p-4">
+    <div className={`modal-backdrop fixed inset-0 ${container ? 'z-[2000]' : 'z-40'} flex items-end justify-center bg-brand-800/30 p-0 backdrop-blur-[2px] sm:items-center sm:p-4`}>
       <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
       <div
         ref={panelRef}
@@ -85,6 +89,6 @@ export default function Modal({ open, title, onClose, children, size = 'md' }) {
         <div className={size === 'form' ? 'modal-form-body flex-1 overflow-y-auto overscroll-contain px-5 pt-5' : 'p-5'}>{children}</div>
       </div>
     </div>,
-    document.body,
+    container || document.body,
   )
 }

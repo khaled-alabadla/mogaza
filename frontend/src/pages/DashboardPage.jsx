@@ -8,7 +8,7 @@ import LocationCard from '../components/LocationCard'
 import Modal from '../components/Modal'
 import Pagination from '../components/Pagination'
 import RecordForm from '../components/RecordForm'
-import { LOCATION_FIELDS, STREET_FIELDS, withNeighborhoodOptions } from '../components/recordFields'
+import { LOCATION_ADD_FIELDS, LOCATION_FIELDS, STREET_FIELDS, withNeighborhoodOptions } from '../components/recordFields'
 import SearchBar from '../components/SearchBar'
 import BrandBand from '../components/BrandBand'
 import Segmented from '../components/Segmented'
@@ -92,9 +92,13 @@ export default function DashboardPage() {
     return () => controller.abort()
   }, [needNeighborhoods])
 
+  const adding = Boolean(formState) && !formState.record
   const formFields = useMemo(
-    () => (scopeKey === 'locations' ? withNeighborhoodOptions(scope.fields, neighborhoods) : scope.fields),
-    [scopeKey, scope.fields, neighborhoods],
+    () =>
+      scopeKey === 'locations'
+        ? withNeighborhoodOptions(adding ? LOCATION_ADD_FIELDS : scope.fields, neighborhoods)
+        : scope.fields,
+    [scopeKey, scope.fields, neighborhoods, adding],
   )
 
   function updateParams(changes) {

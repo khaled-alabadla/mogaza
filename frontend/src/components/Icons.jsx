@@ -287,6 +287,30 @@ export const PinPlusIcon = (p) => (
     <path d="M12 7.2v5.6M9.2 10h5.6" />
   </Svg>
 )
+export const LayersIcon = (p) => (
+  <Svg {...p}>
+    <path d="M12 3l9 5-9 5-9-5z" />
+    <path d="M3 13l9 5 9-5" />
+  </Svg>
+)
+export const ExpandIcon = (p) => (
+  <Svg {...p}>
+    <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" />
+  </Svg>
+)
+export const ShrinkIcon = (p) => (
+  <Svg {...p}>
+    <path d="M4 14h6v6M20 10h-6V4M10 14l-7 7M14 10l7-7" />
+  </Svg>
+)
+export const LegendIcon = (p) => (
+  <Svg {...p}>
+    <circle cx="6" cy="7" r="1.6" />
+    <circle cx="6" cy="12" r="1.6" />
+    <circle cx="6" cy="17" r="1.6" />
+    <path d="M10.5 7H19M10.5 12H19M10.5 17H19" />
+  </Svg>
+)
 export const ExtentIcon = (p) => (
   <Svg {...p}>
     <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />

@@ -6,7 +6,7 @@ import { normalizeArabic } from '../utils/arabic'
 import { CloseIcon, HomeIcon, MapIcon, PinPlusIcon, SearchIcon } from './Icons'
 
 /*
- * The map's search box: one query, three sources, grouped in the list —
+ * The map's search box: one query, three sources, in one list (in this order) —
  *   «من مواقعنا»   the site's own locations that have coordinates (needs «search.view»),
  *   «الأحياء»      the 20 neighborhoods of the paper map,
  *   «من الخريطة»   every named place, street and landmark of Gaza City on OpenStreetMap — about 4,000,
@@ -90,11 +90,16 @@ function useOurLocations(query, enabled) {
   return debounced === query.trim() ? results : []
 }
 
-const GROUPS = [
-  { kind: 'location', title: 'من مواقعنا', icon: PinPlusIcon },
-  { kind: 'neighborhood', title: 'الأحياء', icon: HomeIcon },
-  { kind: 'place', title: 'من الخريطة', icon: MapIcon },
-]
+const ICONS = { location: PinPlusIcon, neighborhood: HomeIcon, place: MapIcon }
+
+function KindIcon({ kind }) {
+  const Icon = ICONS[kind]
+  return (
+    <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-brand-50 text-brand-700">
+      <Icon className="h-3.5 w-3.5" />
+    </span>
+  )
+}
 
 export default function MapSearch({ neighborhoods, onPick }) {
   const { can } = useAuth()
@@ -187,36 +192,25 @@ export default function MapSearch({ neighborhoods, onPick }) {
           aria-label="نتائج البحث"
           className="absolute inset-x-0 top-full z-[1100] mt-1.5 max-h-[22rem] overflow-y-auto rounded-xl bg-white py-1.5 shadow-lg ring-1 ring-line"
         >
-          {GROUPS.map((g) => {
-            const rows = flat.filter((r) => r.kind === g.kind)
-            const waiting = g.kind === 'place' && loading
-            if (!rows.length && !waiting) return null
-            return (
-              <div key={g.kind} role="group" aria-label={g.title}>
-                <p className="flex items-center gap-1.5 px-3 pt-2 pb-1 text-[0.7rem] font-bold text-muted">
-                  <g.icon className="h-3.5 w-3.5" /> {g.title}
-                </p>
-                {rows.map((r) => {
-                  const index = flat.indexOf(r)
-                  return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      role="option"
-                      aria-selected={index === active}
-                      onMouseEnter={() => setActive(index)}
-                      onClick={() => pick(r)}
-                      className={`block w-full px-3 py-2 text-start ${index === active ? 'bg-brand-50' : 'hover:bg-canvas'}`}
-                    >
-                      <span className="block text-sm font-semibold text-ink">{r.title}</span>
-                      {r.subtitle && <span className="block truncate text-xs text-muted">{r.subtitle}</span>}
-                    </button>
-                  )
-                })}
-                {waiting && !rows.length && <p className="px-3 py-2 text-xs text-muted">جارٍ تحميل أماكن المدينة…</p>}
-              </div>
-            )
-          })}
+          {/* one list: the site's locations first, then the neighborhoods, then the city's places */}
+          {flat.map((r, index) => (
+            <button
+              key={r.id}
+              type="button"
+              role="option"
+              aria-selected={index === active}
+              onMouseEnter={() => setActive(index)}
+              onClick={() => pick(r)}
+              className={`flex w-full items-center gap-2.5 px-3 py-2 text-start ${index === active ? 'bg-brand-50' : 'hover:bg-canvas'}`}
+            >
+              <KindIcon kind={r.kind} />
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-ink">{r.title}</span>
+                {r.subtitle && <span className="block truncate text-xs text-muted">{r.subtitle}</span>}
+              </span>
+            </button>
+          ))}
+          {loading && <p className="px-3 py-2 text-xs text-muted">جارٍ تحميل أماكن المدينة…</p>}
           {!flat.length && !loading && <p className="px-3 py-3 text-sm text-muted">لا توجد نتائج داخل مدينة غزة.</p>}
         </div>
       )}

@@ -90,6 +90,18 @@ class LocationViewSet(TrackedViewSet):
             qs = qs.filter(Exists(WaterSlot.objects.filter(zone=OuterRef("water_zone"))))
         return qs
 
+    @action(detail=False, methods=["get"])
+    def points(self, request):
+        """«الخريطة»: every location that has coordinates, with what its card shows (not paginated)."""
+        rows = (Location.active.filter(latitude__isnull=False, longitude__isnull=False)
+                .select_related("neighborhood").order_by("id"))
+        return Response([{
+            "id": l.pk, "place_name": l.place_name, "description": l.description,
+            "building_number": l.building_number, "street_number": l.street_number,
+            "neighborhood_name": l.neighborhood.name if l.neighborhood_id else None,
+            "latitude": float(l.latitude), "longitude": float(l.longitude),
+        } for l in rows])
+
 
 class StreetNameViewSet(TrackedViewSet):
     model = StreetName

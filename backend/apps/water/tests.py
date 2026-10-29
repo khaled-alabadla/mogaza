@@ -17,6 +17,7 @@ from .management.commands import fetch_water_schedules as fetch
 from .management.commands.fetch_water_schedules import parse_building_info, parse_csrf_token, parse_day
 from .models import Neighborhood, WaterSlot, WaterZone, schedule_text, slot_days
 from .zoning import next_free_code, plan_zones, signature, zone_code
+from apps.locations.testing import full_location
 
 N_URL = "/api/neighborhoods/"
 Z_URL = "/api/water-zones/"
@@ -455,7 +456,7 @@ class LocationZoneTests(WaterTestBase):
         self.assertEqual(res.data["water_zone"], self.daraj_a.pk)
         res = self.client.patch(f"{LOC_URL}{self.market.pk}/", {"water_zone": None}, format="json")
         self.assertEqual((res.data["water_zone"], res.data["neighborhood"]), (None, self.daraj.pk))
-        res = self.client.post(LOC_URL, {"place_name": "جديد", "water_zone": 999999}, format="json")
+        res = self.client.post(LOC_URL, full_location(**{"place_name": "جديد", "water_zone": 999999}), format="json")
         self.assertEqual(res.data["water_zone"], ["منطقة المياه المحددة غير موجودة."])
 
     def test_filters(self):

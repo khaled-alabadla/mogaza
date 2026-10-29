@@ -3,6 +3,7 @@ from rest_framework.test import APIClient, APITestCase
 from apps.accounts.models import User
 
 from .models import AuditLog
+from apps.locations.testing import full_location
 
 PASSWORD = "S3cure-Pass-2026"
 URL = "/api/audit-logs/"
@@ -16,7 +17,7 @@ class HiddenSuperuserAuditTests(APITestCase):
         self.admin = User.objects.create_user("admin1", password=PASSWORD, role=User.Role.ADMIN)
         root_client, admin_client = APIClient(), APIClient()
         root_client.post("/api/auth/login/", {"username": "root", "password": PASSWORD})
-        root_client.post("/api/locations/", {"place_name": "موقع أضافه المطور"})        # root's edit
+        root_client.post("/api/locations/", full_location(**{"place_name": "موقع أضافه المطور"}))        # root's edit
         root_client.patch(f"/api/users/{self.root.pk}/", {"first_name": "مطور"})            # change to root itself
         root_client.post("/api/auth/logout/")
         APIClient().post("/api/auth/login/", {"username": "ROOT", "password": "wrong"})       # failed, as typed
@@ -24,7 +25,7 @@ class HiddenSuperuserAuditTests(APITestCase):
         for typed in ("rooot", "root@example.com", "mohammed"):  # mistyped, the e-mail, someone else
             AuditLog.objects.create(action=AuditLog.Action.LOGIN_FAILED, username=typed)
         admin_client.post("/api/auth/login/", {"username": "admin1", "password": PASSWORD})
-        admin_client.post("/api/locations/", {"place_name": "موقع أضافه المدير"})
+        admin_client.post("/api/locations/", full_location(**{"place_name": "موقع أضافه المدير"}))
 
     def entries(self, user):
         self.client.force_authenticate(user)

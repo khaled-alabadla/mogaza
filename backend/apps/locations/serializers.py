@@ -50,6 +50,14 @@ class TrackedSerializer(serializers.ModelSerializer):
         return data
 
 
+# filled in for every new location (the place name is always required)
+REQUIRED_ON_ADD = {"description": "الوصف / الموقع", "building_number": "رقم المبنى", "street_number": "رقم الشارع",
+                   "neighborhood": "الحي"}
+
+# [south, north, west, east] around Gaza City (with a margin): a map point must fall inside
+GAZA_BOX = (31.42, 31.62, 34.33, 34.55)
+
+
 class LocationSerializer(TrackedSerializer):
     neighborhood = serializers.PrimaryKeyRelatedField(
         queryset=Neighborhood.objects.all(), required=False, allow_null=True, error_messages=NEIGHBORHOOD_ERRORS)
@@ -70,8 +78,7 @@ class LocationSerializer(TrackedSerializer):
         fields = ["id", "place_name", "description", "building_number", "street_number", "neighborhood",
                   "neighborhood_name", "water_zone", "water_zone_name", "water_schedule", "water_schedule_text", "is_active",
                   "latitude", "longitude", "created_at", "updated_at", "created_by_name", "updated_by_name"]
-        # the coordinates (for «الخريطة») are shown, not edited from the site's form
-        read_only_fields = ["id", "is_active", "latitude", "longitude", "created_at", "updated_at"]
+        read_only_fields = ["id", "is_active", "created_at", "updated_at"]
         extra_kwargs = {
             "place_name": {"error_messages": {"blank": "اسم المكان مطلوب.", "required": "اسم المكان مطلوب.",
                                               "max_length": "اسم المكان طويل جداً (الحد الأقصى 255 حرفاً)."}},
@@ -81,6 +88,9 @@ class LocationSerializer(TrackedSerializer):
                                 "error_messages": {"max_length": "رقم المبنى طويل جداً (الحد الأقصى 20 حرفاً)."}},
             "street_number": {"required": False, "allow_blank": True,
                               "error_messages": {"max_length": "رقم الشارع طويل جداً (الحد الأقصى 20 حرفاً)."}},
+            # set by «إضافة نقطة» on «الخريطة» (the search page's form leaves them as they are)
+            "latitude": {"required": False, "allow_null": True},
+            "longitude": {"required": False, "allow_null": True},
         }
 
     def get_neighborhood_name(self, obj):
@@ -96,7 +106,12 @@ class LocationSerializer(TrackedSerializer):
         return schedule_text(obj.water_zone.slots.all()) if obj.water_zone_id else ""
 
     def validate(self, attrs):
-        """Keep the building's neighborhood equal to its zone's neighborhood."""
+        """Keep the building's neighborhood equal to its zone's neighborhood; a point is in Gaza City."""
+        lat, lng = attrs.get("latitude"), attrs.get("longitude")
+        if ("latitude" in attrs) != ("longitude" in attrs) or (lat is None) != (lng is None):
+            raise serializers.ValidationError({"latitude": "يجب تحديد خط العرض وخط الطول معاً."})
+        if lat is not None and not (GAZA_BOX[0] <= lat <= GAZA_BOX[1] and GAZA_BOX[2] <= lng <= GAZA_BOX[3]):
+            raise serializers.ValidationError({"latitude": "النقطة خارج مدينة غزة."})
         zone = attrs.get("water_zone")
         if zone is not None:
             attrs["neighborhood"] = zone.neighborhood
@@ -104,6 +119,11 @@ class LocationSerializer(TrackedSerializer):
             current = self.instance.water_zone
             if current is not None and current.neighborhood_id != getattr(attrs["neighborhood"], "pk", None):
                 attrs["water_zone"] = None  # moved to another neighborhood: the old zone no longer applies
+        if self.instance is None:
+            # a new location needs every field (older ones may still have blanks: editing them is unchanged)
+            missing = {name: f"{label} مطلوب." for name, label in REQUIRED_ON_ADD.items() if not attrs.get(name)}
+            if missing:
+                raise serializers.ValidationError(missing)
         return attrs
 
     def validate_place_name(self, value):

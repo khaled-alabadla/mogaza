@@ -4,6 +4,7 @@ from rest_framework.test import APIClient, APITestCase
 from apps.audit.models import AuditLog
 
 from .models import PERMISSION_KEYS, User
+from apps.locations.testing import full_location
 
 PASSWORD = "S3cure-Pass-2026"
 
@@ -81,9 +82,9 @@ class AuthTests(APITestCase):
         res = client.post("/api/auth/login/", {"username": "editor1", "password": PASSWORD})
         self.assertEqual(res.status_code, 200)
         # Without the CSRF header, a mutating request is rejected.
-        res = client.post("/api/locations/", {"place_name": "x"})
+        res = client.post("/api/locations/", full_location(**{"place_name": "x"}))
         self.assertEqual(res.status_code, 403)
-        res = client.post("/api/locations/", {"place_name": "x"}, HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value)
+        res = client.post("/api/locations/", full_location(**{"place_name": "x"}), HTTP_X_CSRFTOKEN=client.cookies["csrftoken"].value)
         self.assertEqual(res.status_code, 201)
 
     def test_login_is_rate_limited(self):
@@ -123,7 +124,7 @@ class AuthTests(APITestCase):
             self.client.force_login(self.user)
             self.assertEqual(admin_client.patch(f"/api/users/{self.user.pk}/", change).status_code, 200)
             self.assertIsNone(self.client.get("/api/auth/me/").data["user"], change)
-            self.assertEqual(self.client.post("/api/locations/", {"place_name": "x"}).status_code, 403, change)
+            self.assertEqual(self.client.post("/api/locations/", full_location(**{"place_name": "x"})).status_code, 403, change)
 
     def test_superuser_is_admin_role(self):
         su = User.objects.create_superuser("root", "root@example.com", PASSWORD)
@@ -176,7 +177,7 @@ class UserManagementTests(APITestCase):
 
     def test_deleting_user_keeps_their_audit_history_and_locations(self):
         self.client.force_authenticate(self.editor)
-        loc_id = self.client.post("/api/locations/", {"place_name": "موقع"}).data["id"]
+        loc_id = self.client.post("/api/locations/", full_location(**{"place_name": "موقع"})).data["id"]
         self.client.force_authenticate(self.admin)
         self.assertEqual(self.client.delete(f"/api/users/{self.editor.pk}/").status_code, 204)
         entry = AuditLog.objects.get(action="CREATE", entity_type="location", entity_id=str(loc_id))
@@ -232,7 +233,7 @@ class AuditLogApiTests(APITestCase):
     def test_admin_can_filter_audit_logs(self):
         admin = User.objects.create_user("admin1", password=PASSWORD, role=User.Role.ADMIN)
         self.client.force_authenticate(admin)
-        self.client.post("/api/locations/", {"place_name": "مسجد الوحدة"})
+        self.client.post("/api/locations/", full_location(**{"place_name": "مسجد الوحدة"}))
         res = self.client.get("/api/audit-logs/", {"action": "CREATE", "entity_type": "location"})
         self.assertEqual(res.status_code, 200)
         self.assertEqual(res.data["count"], 1)

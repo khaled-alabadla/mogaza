@@ -9,6 +9,11 @@ export const LOCATION_FIELDS = [
   { name: 'neighborhood', label: 'الحي', type: 'select', options: [], emptyLabel: 'بدون حي' },
 ]
 
+/** Adding a location: every field must be filled in (editing an older one with blanks is unchanged). */
+export const LOCATION_ADD_FIELDS = LOCATION_FIELDS.map((f) =>
+  f.name === 'neighborhood' ? { ...f, required: true, emptyLabel: 'اختر الحي' } : { ...f, required: true },
+)
+
 /** LOCATION_FIELDS with the «الحي» select filled from a neighborhoods array. */
 export function withNeighborhoodOptions(fields, neighborhoods) {
   const options = (neighborhoods || []).map((n) => ({ value: n.id, label: n.name }))

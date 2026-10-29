@@ -34,19 +34,19 @@ beforeEach(() => {
 })
 
 describe('MapSearch (the map search box)', () => {
-  it('finds our locations, the neighborhoods and OpenStreetMap places, in groups', async () => {
+  it('finds our locations and the city places in one list (ours first), without saying where from', async () => {
     const onPick = vi.fn()
     render(<MapSearch neighborhoods={HOODS} onPick={onPick} />)
     await userEvent.type(screen.getByRole('combobox', { name: 'ابحث على الخريطة' }), 'مسجد')
     const list = await screen.findByRole('listbox', { name: 'نتائج البحث' })
-    const ours = await within(list).findByRole('group', { name: 'من مواقعنا' })
-    expect(within(ours).getByText('مسجد احمد ياسين')).toBeInTheDocument()
+    await within(list).findByText('مسجد احمد ياسين')
+    await within(list).findByText('مسجد الفرقان')
     expect(within(list).queryByText('مسجد بلا موقع')).not.toBeInTheDocument()
-    const places = await within(list).findByRole('group', { name: 'من الخريطة' })
-    expect(within(places).getByText('مسجد الفرقان')).toBeInTheDocument()
-    expect(within(places).getByText('مسجد')).toBeInTheDocument() // what the place is
+    expect(within(list).getAllByRole('option')[0]).toHaveTextContent('مسجد احمد ياسين')
+    expect(within(list).getByText('مسجد')).toBeInTheDocument() // what the place is
+    for (const label of ['من مواقعنا', 'من الخريطة', 'الأحياء']) expect(within(list).queryByText(label)).not.toBeInTheDocument()
 
-    await userEvent.click(within(ours).getByText('مسجد احمد ياسين'))
+    await userEvent.click(within(list).getByText('مسجد احمد ياسين'))
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ kind: 'location', title: 'مسجد احمد ياسين', lat: 31.5369, lng: 34.4508 }))
   })
 
@@ -67,8 +67,8 @@ describe('MapSearch (the map search box)', () => {
     render(<MapSearch neighborhoods={HOODS} onPick={onPick} />)
     const box = screen.getByRole('combobox', { name: 'ابحث على الخريطة' })
     await userEvent.type(box, 'رم')
-    const hoods = await screen.findByRole('group', { name: 'الأحياء' })
-    expect(within(hoods).getAllByRole('option')).toHaveLength(2)
+    const list = await screen.findByRole('listbox', { name: 'نتائج البحث' })
+    expect(within(list).getAllByRole('option')).toHaveLength(2)
     await userEvent.keyboard('{ArrowDown}{Enter}')
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ kind: 'neighborhood', title: 'الرمال الجنوبي' }))
   })
@@ -77,7 +77,7 @@ describe('MapSearch (the map search box)', () => {
     auth.perms = new Set(['water.view'])
     render(<MapSearch neighborhoods={HOODS} onPick={vi.fn()} />)
     await userEvent.type(screen.getByRole('combobox', { name: 'ابحث على الخريطة' }), 'الدرج')
-    await screen.findByRole('group', { name: 'الأحياء' })
+    await screen.findByText('الدرج')
     expect(locationsApi.list).not.toHaveBeenCalled()
   })
 })
