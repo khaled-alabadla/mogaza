@@ -402,3 +402,28 @@ class CoordinatesTests(LocationTestBase):
         self.assertEqual([(p["id"], p["latitude"], p["building_number"]) for p in res.data], [(self.council.pk, 31.5225, "95")])
         self.client.force_authenticate(None)
         self.assertIn(self.client.get(f"{URL}points/").status_code, (401, 403))
+
+
+class CoordinatesDataTests(LocationTestBase):
+    """Migration 0010: the known buildings get their map coordinates (matched by building + street numbers)."""
+
+    def test_fills_only_missing_coordinates(self):
+        import importlib
+
+        from django.apps import apps
+
+        fill = importlib.import_module("apps.locations.migrations.0010_location_coordinates_data").fill_coordinates
+        known = Location.objects.create(place_name="مبنى معروف", building_number="381", street_number="1000")
+        placed = Location.objects.create(place_name="نقطة من الخريطة", building_number="406", street_number="1000",
+                                         latitude="31.500000", longitude="34.400000")
+        fill(apps, None)
+        known.refresh_from_db()
+        placed.refresh_from_db()
+        self.assertEqual((str(known.latitude), str(known.longitude)), ("31.523479", "34.434232"))
+        self.assertEqual(str(placed.latitude), "31.500000")  # set from the map: kept
+        self.council.refresh_from_db()
+        self.assertEqual(str(self.council.latitude), "31.509152")  # مجلس الوزراء 95 / 1050 is in the file
+        unknown = Location.objects.create(place_name="غير معروف", building_number="1", street_number="1")
+        fill(apps, None)
+        unknown.refresh_from_db()
+        self.assertIsNone(unknown.latitude)  # not in the file
