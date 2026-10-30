@@ -10,9 +10,10 @@ export default function ConfirmDialog({
   busy = false,
   onConfirm,
   onCancel,
+  container,
 }) {
   return (
-    <Modal open={open} title={title} onClose={busy ? undefined : onCancel} size="sm">
+    <Modal open={open} title={title} onClose={busy ? undefined : onCancel} size="sm" container={container}>
       <p className="text-base text-ink">{message}</p>
       {details && <p className="mt-2 rounded-lg bg-canvas px-3 py-2 text-sm font-semibold text-ink">{details}</p>}
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">

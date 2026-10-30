@@ -328,3 +328,45 @@ class ComplaintPermissionTests(APITestCase):
             self.as_user(permissions, role)
             self.assertEqual(self.client.get(URL).status_code, 403)
             self.assertEqual(self.client.get(f"{URL}export/", {"kind": "complaint"}).status_code, 403)
+
+
+class ComplaintPointTests(APITestCase):
+    """«شكوى على الخريطة»: a complaint's number and type where it is."""
+
+    URL = "/api/complaint-points/"
+    BODY = {"number": " 2026/155 ", "category": "تسرب مياه", "latitude": "31.512345", "longitude": "34.456789"}
+
+    def setUp(self):
+        self.editor = User.objects.create_user("ed", password=PASSWORD, role=User.Role.EDITOR,
+                                               permissions=["complaints.view", "complaints.edit"])
+        self.reader = User.objects.create_user("rd", password=PASSWORD, role=User.Role.EDITOR,
+                                               permissions=["complaints.view"])
+
+    def test_add_list_edit_delete_with_audit(self):
+        self.client.force_authenticate(self.editor)
+        res = self.client.post(self.URL, self.BODY, format="json")
+        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual((res.data["number"], res.data["category"]), ("2026/155", "تسرب مياه"))
+        pk = res.data["id"]
+        self.assertEqual(self.client.patch(f"{self.URL}{pk}/", {"category": "انقطاع مياه"}, format="json").data["category"],
+                         "انقطاع مياه")
+        self.client.force_authenticate(self.reader)
+        self.assertEqual([p["number"] for p in self.client.get(self.URL).data], ["2026/155"])
+        self.assertEqual(self.client.delete(f"{self.URL}{pk}/").status_code, 403)  # reading only
+        self.client.force_authenticate(self.editor)
+        self.assertEqual(self.client.delete(f"{self.URL}{pk}/").status_code, 204)
+        actions = sorted(AuditLog.objects.filter(entity_type="complaintpoint").values_list("action", flat=True))
+        self.assertEqual(actions, ["CREATE", "DELETE", "UPDATE"])
+
+    def test_number_type_and_place_required(self):
+        self.client.force_authenticate(self.editor)
+        for change in ({"number": " "}, {"category": ""}, {"latitude": "31.9"}):
+            res = self.client.post(self.URL, {**self.BODY, **change}, format="json")
+            self.assertEqual(res.status_code, 400, change)
+        res = self.client.post(self.URL, {"number": "1", "category": "x"}, format="json")
+        self.assertEqual(res.status_code, 400)
+
+    def test_without_complaints_view_nothing(self):
+        other = User.objects.create_user("no", password=PASSWORD, role=User.Role.EDITOR, permissions=["inquiries.view"])
+        self.client.force_authenticate(other)
+        self.assertEqual(self.client.get(self.URL).status_code, 403)

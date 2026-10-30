@@ -39,6 +39,8 @@ const ENTITY_LABELS = {
   watertable: 'جدول المياه',
   waterzone: 'منطقة مياه',
   waterslot: 'موعد مياه',
+  watershape: 'منطقة مياه على الخريطة',
+  complaintpoint: 'شكوى على الخريطة',
 }
 
 const FIELD_LABELS = {

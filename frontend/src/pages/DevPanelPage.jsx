@@ -23,7 +23,9 @@ import {
 } from '../components/Icons'
 import LoadingState from '../components/LoadingState'
 import Tricolor from '../components/Tricolor'
-import { CONTENT_GROUPS } from '../content/registry'
+import { NAV_SECTIONS } from '../components/navLinks'
+import { CONTENT_GROUPS, WIP_KEY } from '../content/registry'
+import { useContentValue } from '../context/ContentContext'
 import { useAuth } from '../context/AuthContext'
 import { devAuthApi, setCsrfToken } from '../services/api'
 import { parseApiError } from '../utils/errors'
@@ -230,9 +232,56 @@ const MANAGE_LINKS = [
   { to: '/audit-logs', label: 'سجل العمليات', hint: 'كل التعديلات ومن قام بها', icon: ListIcon },
 ]
 
+/** «الصفحات قيد التطوير»: a switch per page; a page switched on shows everyone else «قيد التطوير». */
+function DevelopmentPages() {
+  const value = useContentValue(WIP_KEY)
+  const pages = Array.isArray(value) ? value : []
+  const field = useContentField(WIP_KEY)
+  const links = NAV_SECTIONS.flatMap((s) => s.links).filter((l) => l.to !== '/')
+  const toggle = (to) => field.save(pages.includes(to) ? pages.filter((p) => p !== to) : [...pages, to])
+  return (
+    <section className="card p-4 sm:p-5">
+      <h2 className="font-bold text-ink">الصفحات قيد التطوير</h2>
+      <p className="mt-1 text-sm text-muted">
+        الصفحة المفعّلة هنا تبقى ظاهرة في القائمة، لكن من يفتحها — حتى مدير النظام — يرى شاشة «قيد التطوير». أنت فقط ترى الصفحة.
+      </p>
+      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+        {links.map(({ to, label, icon: Icon }) => {
+          const on = pages.includes(to)
+          return (
+            <li key={to}>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={on}
+                aria-label={`${label} قيد التطوير`}
+                disabled={field.busy}
+                onClick={() => toggle(to)}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-start ring-1 transition ${
+                  on ? 'bg-gold-100 ring-gold-400/50' : 'bg-white ring-line hover:bg-canvas'
+                }`}
+              >
+                <Icon className={`h-5 w-5 flex-none ${on ? 'text-gold-700' : 'text-muted'}`} />
+                <span className="flex-1">
+                  <span className="block text-sm font-semibold text-ink">{label}</span>
+                  <span className={`block text-xs ${on ? 'font-semibold text-gold-700' : 'text-muted'}`}>{on ? 'قيد التطوير' : 'متاحة للجميع'}</span>
+                </span>
+                <span className={`relative h-5 w-9 flex-none rounded-full transition-colors ${on ? 'bg-gold-700' : 'bg-gray-300'}`}>
+                  <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${on ? 'start-[1.15rem]' : 'start-0.5'}`} />
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
 function ManageTab() {
   return (
     <div className="space-y-4">
+      <DevelopmentPages />
       <p className="text-sm text-muted">حسابك يملك كل الصلاحيات في هذه الصفحات، ولا يظهر لبقية المستخدمين.</p>
       <div className="grid gap-3 sm:grid-cols-2">
         {MANAGE_LINKS.map(({ to, label, hint, icon: Icon }) => (

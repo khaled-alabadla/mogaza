@@ -311,6 +311,23 @@ export const LegendIcon = (p) => (
     <path d="M10.5 7H19M10.5 12H19M10.5 17H19" />
   </Svg>
 )
+export const BuildingIcon = (p) => (
+  <Svg {...p}>
+    <path d="M5 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16M15 10h3a1 1 0 0 1 1 1v10M3 21h18" />
+    <path d="M8.5 8h3M8.5 12h3M8.5 16h3" />
+  </Svg>
+)
+export const ToolsIcon = (p) => (
+  <Svg {...p}>
+    <path d="M14.7 6.3a4 4 0 0 0-5.4 5.2L3.5 17.3a1.8 1.8 0 0 0 2.5 2.5l5.8-5.8a4 4 0 0 0 5.2-5.4l-2.4 2.4-2.3-.5-.5-2.3z" />
+  </Svg>
+)
+export const RulerIcon = (p) => (
+  <Svg {...p}>
+    <path d="M3 16.5L16.5 3 21 7.5 7.5 21z" />
+    <path d="M7 12.5l1.8 1.8M10 9.5l1.8 1.8M13 6.5l1.8 1.8" />
+  </Svg>
+)
 export const ExtentIcon = (p) => (
   <Svg {...p}>
     <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />

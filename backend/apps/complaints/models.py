@@ -158,3 +158,33 @@ class DailyReport(models.Model):
     def snapshot(self):
         return {"report_date": self.report_date.isoformat() if self.report_date else None, "rows": self.rows,
                 "summons": self.summons, "archived": self.archived}
+
+
+class ComplaintPoint(models.Model):
+    """
+    A complaint marked on «الخريطة» where it is (from «شكوى على الخريطة»): its number in the complaints
+    system and its type, both required.
+    """
+
+    number = models.CharField("رقم الشكوى", max_length=50)
+    category = models.CharField("نوع الشكوى", max_length=150)
+    latitude = models.DecimalField("خط العرض", max_digits=9, decimal_places=6)
+    longitude = models.DecimalField("خط الطول", max_digits=9, decimal_places=6)
+    created_at = models.DateTimeField("تاريخ الإضافة", auto_now_add=True)
+    updated_at = models.DateTimeField("آخر تعديل", auto_now=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+", verbose_name="أضيفت بواسطة")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+", verbose_name="عُدّلت بواسطة")
+
+    class Meta:
+        verbose_name = "شكوى على الخريطة"
+        verbose_name_plural = "الشكاوى على الخريطة"
+        ordering = ["-created_at", "-id"]
+
+    def __str__(self):
+        return f"شكوى {self.number}"
+
+    def snapshot(self):
+        return {"number": self.number, "category": self.category,
+                "latitude": str(self.latitude), "longitude": str(self.longitude)}

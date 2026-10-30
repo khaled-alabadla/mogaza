@@ -104,5 +104,15 @@ export const CONTENT_GROUPS = [
   },
 ]
 
+/**
+ * «قيد التطوير» (set in the developer dashboard's «إدارة الموقع»): the pages that show everyone — even
+ * administrators — a «under development» screen instead of the page; only the developer sees the page.
+ * Not one of the texts above (it has its own switches).
+ */
+export const WIP_KEY = 'site.wip_pages'
+
 /** key → field */
-export const CONTENT_FIELDS = Object.fromEntries(CONTENT_GROUPS.flatMap((g) => g.fields).map((f) => [f.key, f]))
+export const CONTENT_FIELDS = {
+  ...Object.fromEntries(CONTENT_GROUPS.flatMap((g) => g.fields).map((f) => [f.key, f])),
+  [WIP_KEY]: { key: WIP_KEY, label: 'الصفحات قيد التطوير', type: 'json', default: [] },
+}

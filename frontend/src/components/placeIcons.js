@@ -55,6 +55,9 @@ export const NOT_ICONS = new Set(['شارع', 'منطقة', 'إشارة مرور
 /** The group of a kind of place («مسجد» → 'worship'). */
 export const groupOf = (kind) => KIND_GROUP[kind] || 'other'
 
+/** The colour and drawing of a kind of place (the card's badge uses them). */
+export const kindLook = (kind) => GROUPS[groupOf(kind)]
+
 /** The groups shown as soon as icons appear; the others (shops, food…) only closer in, where there is room. */
 export const MAIN_GROUPS = new Set(['worship', 'school', 'health', 'gov'])
 

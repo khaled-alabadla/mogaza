@@ -86,6 +86,8 @@ export const locationsApi = {
   ...restorable('locations'),
   /** «الخريطة»: every location that has coordinates (not paginated) */
   points: (signal) => api.get('/locations/points/', { signal }).then((r) => r.data),
+  /** «الخريطة»: where a building is from its numbers ({ building, street }) → { found, latitude, longitude, location } */
+  findBuilding: (params, signal) => api.get('/locations/find-building/', { params, signal }).then((r) => r.data),
 }
 export const streetsApi = restorable('streets')
 export const committeesApi = restorable('committees')
@@ -99,6 +101,8 @@ export const usersApi = {
 export const neighborhoodsApi = crud('neighborhoods')
 /** Official water distribution table: `list` → { today, today_display, results: [...] } (not paginated). */
 export const waterTableApi = crud('water-table')
+/** Water areas drawn on «الخريطة» (each tied to a row of the table): `list` → { today, results }. */
+export const waterShapesApi = crud('water-shapes')
 /**
  * Complaints and inquiries (`kind`): list adds `pending_count`. `exportUrl` is a formatted .xlsx of
  * every record matching the same filters (kind required).
@@ -108,6 +112,8 @@ export const complaintsApi = {
   markUploaded: (ids, uploaded = true) => api.post('/complaints/mark-uploaded/', { ids, uploaded }).then((r) => r.data),
   exportUrl: (params) => `/api/complaints/export/?${new URLSearchParams(params)}`,
 }
+/** «شكوى على الخريطة»: complaints marked where they are ({ number, category, latitude, longitude }). */
+export const complaintPointsApi = crud('complaint-points')
 /** «الشكاوى العاجلة»: list adds `unresolved_count`; the Excel export uses the list's filters. */
 export const urgentApi = {
   ...restorable('urgent-complaints'),

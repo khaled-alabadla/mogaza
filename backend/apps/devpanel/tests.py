@@ -80,6 +80,16 @@ class DevLoginTests(APITestCase):
         self.assertEqual(self.client.delete(url).status_code, 204)
         self.assertFalse(SiteContent.objects.filter(key="login.welcome").exists())
 
+    def test_pages_under_development(self):
+        # only the developer sets the list; everyone (the site) reads it
+        url = "/api/dev/content/site.wip_pages/"
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.put(url, {"value": ["/map"]}, format="json").status_code, 403)
+        self.client.force_authenticate(self.dev)
+        self.assertEqual(self.client.put(url, {"value": ["/map"]}, format="json").status_code, 200)
+        self.client.force_authenticate(self.admin)
+        self.assertEqual(self.client.get("/api/content/").data["site.wip_pages"], ["/map"])
+
     def test_developer_actions_stay_hidden_from_administrators(self):
         self.client.force_authenticate(self.dev)
         self.client.put("/api/dev/content/login.welcome/", {"value": "أهلاً"}, format="json")

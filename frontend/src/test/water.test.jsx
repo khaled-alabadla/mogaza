@@ -7,7 +7,8 @@ import { normalizeArabic } from '../utils/arabic'
 
 const auth = { edit: true, can: (key) => (key === 'water.edit' ? auth.edit : key === 'water.view') }
 vi.mock('../context/AuthContext', () => ({ useAuth: () => auth }))
-vi.mock('../context/ToastContext', () => ({ useToast: () => ({ success: vi.fn(), error: vi.fn() }) }))
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
+vi.mock('../context/ToastContext', () => ({ useToast: () => toast }))
 vi.mock('../services/api', () => ({
   waterTableApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
 }))
@@ -220,6 +221,21 @@ describe('WaterSchedulePage', () => {
     await userEvent.click(screen.getByRole('button', { name: /طباعة/ }))
     expect(window.print).toHaveBeenCalled()
     delete window.print
+  })
+
+  it('a new schedule with the days of an existing row is added to that row (and says so)', async () => {
+    waterTableApi.create.mockResolvedValue({ id: 2, days: [2, 6], days_text: 'الاثنين / الجمعة', merged: true, added: 1, area_list: [] })
+    renderPage()
+    await screen.findByText('الدرج')
+    await userEvent.click(screen.getAllByRole('button', { name: /إضافة موعد/ })[0])
+    const dialog = screen.getByRole('dialog')
+    expect(within(dialog).getByText(/تُضاف العناوين إليه تلقائياً/)).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'الاثنين' }))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'الجمعة' }))
+    await userEvent.type(within(dialog).getByLabelText('خط ماكروت'), 'حي جديد')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'إضافة الموعد' }))
+    expect(waterTableApi.create).toHaveBeenCalledWith(expect.objectContaining({ days: [2, 6] }))
+    expect(toast.success).toHaveBeenCalledWith('أُضيفت العناوين إلى موعد «الاثنين / الجمعة» الموجود.')
   })
 
   it('deletes a row after confirmation', async () => {

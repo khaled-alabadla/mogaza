@@ -3,6 +3,8 @@ API for the official water distribution table («جدول توزيع الميا�
 
     GET    /api/water-table/            all rows (not paginated, small table) + today's day index
     POST   /api/water-table/            {days: [0, 3], note?, areas: [{"name": "النديم", "source": "mekorot"}, …]}
+                                        when a row with the same days exists, the areas are added to it
+                                        (200, "merged": true, "added": n) instead of making a second row
     PATCH  /api/water-table/{id}/       same fields; `areas`, when sent, replaces the row's list
 
 Each area has a water source: "mekorot" (خط ماكروت), "wells" (الآبار المحلية) or "" (غير مصنّف).
@@ -12,11 +14,12 @@ An area may also be sent as a plain string (= unclassified).
 Read: water.view (or anyone when PUBLIC_SEARCH_ENABLED). Write: water.edit.
 """
 from django.db import transaction
-from rest_framework import serializers, viewsets
+from rest_framework import serializers, status, viewsets
 from rest_framework.response import Response
 
 from apps.accounts.permissions import WaterPermission
 from apps.audit.mixins import AuditedViewSetMixin
+from apps.audit.models import AuditLog
 from apps.locations.text import clean_text
 
 from .models import DAY_LABELS, DistributionArea, DistributionGroup, WaterSource, today_info
@@ -119,6 +122,25 @@ class DistributionGroupSerializer(serializers.ModelSerializer):
             [DistributionArea(group=group, sort_order=i, **area) for i, area in enumerate(areas)])
 
 
+def row_for_days(days):
+    """The table's row with exactly these days, or None."""
+    days = sorted(set(days))
+    return next((g for g in DistributionGroup.objects.prefetch_related("areas") if sorted(g.days) == days), None)
+
+
+def add_areas(group, areas):
+    """Appends the areas the row doesn't list yet (by name); returns how many were added."""
+    have = {a.name for a in group.areas.all()}
+    new = [a for a in areas if a["name"] not in have]
+    start = max((a.sort_order for a in group.areas.all()), default=-1) + 1
+    DistributionArea.objects.bulk_create(
+        [DistributionArea(group=group, sort_order=start + i, **area) for i, area in enumerate(new)])
+    if new:
+        group.save(update_fields=["updated_at"])
+    getattr(group, "_prefetched_objects_cache", {}).pop("areas", None)
+    return len(new)
+
+
 class DistributionGroupViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     """Rows of the official distribution table (see the module docstring). Audited as "watertable"."""
 
@@ -134,3 +156,19 @@ class DistributionGroupViewSet(AuditedViewSetMixin, viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         rows = self.get_serializer(self.get_queryset(), many=True).data
         return Response({**today_info(), "results": rows})
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        """A new schedule: added to the row with the same days when there is one, else a new row."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        row = row_for_days(serializer.validated_data["days"])
+        if row is None:
+            self.perform_create(serializer)
+            return Response({**serializer.data, "merged": False, "added": len(serializer.validated_data["areas"])},
+                            status=status.HTTP_201_CREATED)
+        before = row.snapshot()
+        added = add_areas(row, serializer.validated_data["areas"])
+        if added:
+            self.audit(AuditLog.Action.UPDATE, row, before=before, after=row.snapshot())
+        return Response({**self.get_serializer(row).data, "merged": True, "added": added})

@@ -533,3 +533,397 @@
   stroke: #ffffff;
   stroke-opacity: 0.8;
 }
+
+/* «جدول المياه» on the map: the water card, and nothing but the map takes clicks while drawing */
+.water-map .search-card.is-water .search-card-head {
+  background: linear-gradient(135deg, #075985, #0284c7);
+}
+.water-map .search-card-badge.is-on {
+  background: #fff;
+  color: #0369a1;
+}
+.water-map .search-card-badge.is-off {
+  background: rgb(0 0 0 / 0.25);
+}
+.water-map .search-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem 0;
+}
+.water-map .search-card-actions a,
+.water-map .search-card-actions button {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.6rem;
+  border: 0;
+  background: var(--color-brand-50);
+  box-shadow: inset 0 0 0 1px rgb(10 107 56 / 0.15);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-brand-700);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.water-map .search-card-actions .is-done {
+  background: var(--color-brand-600);
+  color: #fff;
+}
+.water-map .search-card-actions + .search-card-actions {
+  padding-top: 0.4rem;
+}
+.water-map .search-card-actions button.is-danger {
+  background: #fef2f2;
+  box-shadow: inset 0 0 0 1px rgb(220 38 38 / 0.2);
+  color: #b91c1c;
+}
+.water-map[data-tool='draw'] .leaflet-water-pane *,
+.water-map[data-tool='draw'] .leaflet-spots-pane *,
+.water-map[data-tool='draw'] .leaflet-places-pane * {
+  pointer-events: none !important;
+}
+.water-map[data-tool='draw'] .leaflet-sketch-pane .leaflet-interactive {
+  cursor: pointer;
+}
+/* while drawing, the neighborhood names don't follow the mouse */
+.water-map[data-tool='draw'] .hood-tip {
+  display: none;
+}
+
+/* «قياس»: the length beside the last point */
+.water-map .measure-tip {
+  border: 0;
+  border-radius: 999px;
+  background: #b45309;
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.55rem;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.25);
+}
+.water-map .measure-tip::before {
+  display: none;
+}
+.water-map[data-tool='measure'] .leaflet-water-pane *,
+.water-map[data-tool='measure'] .leaflet-spots-pane *,
+.water-map[data-tool='measure'] .leaflet-places-pane * {
+  pointer-events: none !important;
+}
+.water-map[data-tool='measure'],
+.water-map[data-tool='measure'] .leaflet-interactive {
+  cursor: crosshair;
+}
+.water-map[data-tool='measure'] .hood-tip {
+  display: none;
+}
+
+/* a complaint's card */
+.water-map .search-card.is-complaint .search-card-head {
+  background: linear-gradient(135deg, #9a3412, #ea580c);
+  padding-inline-start: 0.85rem;
+}
+
+/* a complaint's card: its number and type (the type as text, not a big number) */
+.water-map .search-card-num-value.is-text {
+  font-size: 0.9rem;
+  direction: rtl;
+  text-align: center;
+  line-height: 1.35;
+}
+/* «شكوى على الخريطة»: a click anywhere marks the spot */
+.water-map[data-tool='complaint'],
+.water-map[data-tool='complaint'] .leaflet-interactive {
+  cursor: crosshair;
+}
+.water-map[data-tool='complaint'] .leaflet-water-pane *,
+.water-map[data-tool='complaint'] .leaflet-spots-pane *,
+.water-map[data-tool='complaint'] .leaflet-places-pane * {
+  pointer-events: none !important;
+}
+.water-map[data-tool='complaint'] .hood-tip {
+  display: none;
+}
+
+/* «هادئة»: the street map in quiet greys */
+.water-map .tiles-quiet {
+  filter: grayscale(0.85) brightness(1.06) contrast(0.92);
+}
+/* map pictures loading: a thin moving bar along the top */
+.map-loading {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 1001;
+  height: 3px;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.map-loading.is-on {
+  opacity: 1;
+}
+.map-loading::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, var(--color-brand-500), transparent);
+  animation: map-loading 1.1s ease-in-out infinite;
+}
+@keyframes map-loading {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+/* «الطبقات» opens softly */
+.map-panel {
+  animation: map-panel-in 0.18s ease-out;
+}
+@keyframes map-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+/* ---------- the place card («.pc»): name, what is known, the numbers, what can be done ---------- */
+.water-map .pc {
+  width: 17.5rem;
+  max-width: calc(100vw - 4rem);
+  padding-bottom: 0;
+  border-top: 4px solid var(--pc-accent);
+}
+.water-map .search-popup .leaflet-popup-content-wrapper:has(.pc) {
+  border-radius: 1rem;
+}
+.water-map .pc-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 0.95rem 0.6rem 2rem;
+}
+.water-map .pc-badge {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.8rem;
+  background: var(--pc-accent);
+  color: #fff;
+  box-shadow: 0 4px 10px -4px var(--pc-accent);
+}
+.water-map .pc-badge svg {
+  width: 18px;
+  height: 18px;
+  stroke: #fff;
+}
+.water-map .pc-names {
+  min-width: 0;
+}
+.water-map .pc-title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--color-ink);
+}
+.water-map .pc-chip {
+  display: inline-block;
+  margin-top: 0.2rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--pc-accent);
+  background: color-mix(in srgb, var(--pc-accent) 12%, #fff);
+}
+.water-map .pc-rows {
+  margin: 0 0.95rem;
+  padding: 0.45rem 0;
+  border-top: 1px solid var(--color-line);
+}
+.water-map .pc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.18rem 0;
+  font-size: 0.8rem;
+}
+.water-map .pc-row dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex: none;
+  width: 4.2rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+.water-map .pc-row dt svg {
+  color: var(--pc-accent);
+}
+.water-map .pc-row dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-ink);
+  line-height: 1.5;
+}
+.water-map .pc-nums {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 0.5rem;
+  margin: 0.2rem 0.95rem 0.75rem;
+}
+.water-map .pc-num {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.55rem 0.4rem 0.5rem;
+  border-radius: 0.8rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pc-accent) 9%, #fff), #fff);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pc-accent) 22%, transparent);
+  transition: box-shadow 0.2s;
+}
+.water-map .pc-num.is-done {
+  box-shadow: inset 0 0 0 2px var(--pc-accent);
+}
+.water-map .pc-num-label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+.water-map .pc-num-value {
+  margin-top: 0.1rem;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--pc-accent);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+}
+.water-map .pc-copy {
+  position: absolute;
+  top: 0.3rem;
+  left: 0.3rem;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.water-map .pc-copy:hover {
+  background: #fff;
+  color: var(--pc-accent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.12);
+}
+.water-map .pc-copied {
+  margin-top: 0.15rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--pc-accent);
+}
+.water-map .pc-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.2rem 0.95rem 0.75rem;
+  padding: 0.65rem;
+  border-radius: 0.8rem;
+  border: 1.5px dashed var(--color-line);
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+.water-map .pc-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pc-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.water-map .pc-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.6rem 0.8rem 0.75rem;
+  border-top: 1px solid var(--color-line);
+  background: #fafbfa;
+}
+.water-map .pc-action {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.38rem 0.55rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--color-line);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-ink);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.water-map .pc-action:hover {
+  color: var(--pc-accent);
+  box-shadow: inset 0 0 0 1px var(--pc-accent);
+}
+.water-map .pc-action.is-primary,
+.water-map .pc-action.is-done {
+  background: var(--pc-accent);
+  color: #fff;
+  box-shadow: none;
+}
+.water-map .search-popup:has(.pc) .leaflet-popup-close-button {
+  color: var(--color-muted);
+  top: 0.55rem;
+}
+
+/* where the search brought the map: a ring spreading out once */
+.water-map .pulse-ring {
+  background: none;
+  border: 0;
+}
+.water-map .pulse-ring span {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 3px solid var(--color-brand-500);
+  animation: pulse-ring 1.2s ease-out 2;
+}
+@keyframes pulse-ring {
+  from {
+    transform: scale(0.3);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}

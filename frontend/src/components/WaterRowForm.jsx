@@ -96,6 +96,9 @@ export default function WaterRowForm({ row, onSubmit, onCancel }) {
           })}
         </div>
         {errors.days && <p className="field-error">{errors.days}</p>}
+        {!row && (
+          <p className="mt-2 text-xs text-muted">إذا كان في الجدول موعد بنفس الأيام، تُضاف العناوين إليه تلقائياً بدل إنشاء موعد جديد.</p>
+        )}
       </fieldset>
 
       <fieldset>

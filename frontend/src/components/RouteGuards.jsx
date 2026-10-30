@@ -1,7 +1,9 @@
-import { Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
+import { WIP_KEY } from '../content/registry'
 import { useAuth } from '../context/AuthContext'
+import { useContentValue } from '../context/ContentContext'
 import { authCan, isPublicPermission } from '../context/permissions'
-import { ShieldIcon } from './Icons'
+import { ShieldIcon, ToolsIcon } from './Icons'
 import LoadingState from './LoadingState'
 import { firstAllowedPath } from './navLinks'
 
@@ -15,6 +17,53 @@ export function NoAccess() {
       <h1 className="mt-4 text-xl font-bold text-ink">لا تملك صلاحية</h1>
       <p className="mt-1 text-sm text-muted">ليس لحسابك صلاحية فتح هذه الصفحة. تواصل مع مسؤول النظام إن كنت تحتاجها.</p>
     </div>
+  )
+}
+
+/** «قيد التطوير»: what everyone but the developer sees on a page the developer is still working on. */
+export function UnderDevelopment() {
+  return (
+    <div className="page-enter flex min-h-[60vh] items-center justify-center px-4">
+      <div className="card relative w-full max-w-lg overflow-hidden p-10 text-center">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-l from-brand-600 via-gold-400 to-brand-600" aria-hidden="true" />
+        <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-700 ring-8 ring-brand-50/50">
+          <ToolsIcon className="h-8 w-8" />
+        </span>
+        <h1 className="mt-6 text-2xl font-bold text-ink">الصفحة قيد التطوير</h1>
+        <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
+          نعمل حالياً على تطوير هذه الصفحة وتحسينها، وستكون متاحة قريباً بإذن الله.
+        </p>
+        <Link to="/" className="btn btn-primary mt-7 inline-flex">
+          العودة إلى الرئيسية
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+/** The developer's view of such a page: a strip says only he sees it. */
+function DevelopmentNotice() {
+  return (
+    <p className="mb-4 flex items-center gap-2 rounded-xl bg-gold-100 px-4 py-2.5 text-sm font-semibold text-gold-700 ring-1 ring-gold-400/40">
+      <ToolsIcon className="h-4 w-4 flex-none" />
+      هذه الصفحة «قيد التطوير»: تظهر لك فقط، وبقية المستخدمين يرون شاشة «قيد التطوير».
+    </p>
+  )
+}
+
+/** A page under development: the developer sees it (with a notice), everyone else the «قيد التطوير» screen. */
+function DevelopmentGate({ children }) {
+  const { pathname } = useLocation()
+  const auth = useAuth()
+  const pages = useContentValue(WIP_KEY)
+  const section = `/${pathname.split('/')[1] || ''}`
+  if (!Array.isArray(pages) || !pages.includes(section)) return children
+  if (!auth.isSuperuser) return <UnderDevelopment />
+  return (
+    <>
+      <DevelopmentNotice />
+      {children}
+    </>
   )
 }
 
@@ -37,7 +86,7 @@ export function RequirePermission({ perm, children }) {
   const auth = useAuth()
   const location = useLocation()
   if (auth.loading) return <LoadingState />
-  if (authCan(auth, perm)) return children
+  if (authCan(auth, perm)) return <DevelopmentGate>{children}</DevelopmentGate>
   if (!auth.isAuthenticated && !isPublicPermission(perm, auth.publicSearch)) {
     return <Navigate to="/login" replace state={{ from: location }} />
   }

@@ -88,6 +88,8 @@ class LocationViewSet(TrackedViewSet):
                 qs = qs.filter(**{f"{param}_id": value})
         if bool_param(self.request, "has_schedule"):
             qs = qs.filter(Exists(WaterSlot.objects.filter(zone=OuterRef("water_zone"))))
+        if bool_param(self.request, "no_coordinates"):  # «الخريطة»: the ones still to be placed on it
+            qs = qs.filter(latitude__isnull=True)
         return qs
 
     @action(detail=False, methods=["get"])
@@ -98,6 +100,7 @@ class LocationViewSet(TrackedViewSet):
         return Response([{
             "id": l.pk, "place_name": l.place_name, "description": l.description,
             "building_number": l.building_number, "street_number": l.street_number,
+            "neighborhood": l.neighborhood_id,
             "neighborhood_name": l.neighborhood.name if l.neighborhood_id else None,
             "latitude": float(l.latitude), "longitude": float(l.longitude),
         } for l in rows])

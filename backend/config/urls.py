@@ -13,6 +13,9 @@ from apps.complaints.views import ComplaintViewSet
 from apps.devpanel.views import ContentItemView, ContentView, OtpRequestView, OtpVerifyView
 from apps.locations.views import CircularViewSet, CommitteeRepViewSet, LocationViewSet, StreetNameViewSet
 from apps.water.views import NeighborhoodViewSet, WaterZoneViewSet
+from apps.complaints.points_api import ComplaintPointViewSet
+from apps.locations.building_lookup import FindBuildingView
+from apps.water.shapes_api import WaterShapeViewSet
 from apps.water.table_api import DistributionGroupViewSet
 
 router = DefaultRouter()
@@ -23,6 +26,8 @@ router.register("circulars", CircularViewSet, basename="circular")
 router.register("neighborhoods", NeighborhoodViewSet, basename="neighborhood")
 router.register("water-zones", WaterZoneViewSet, basename="water-zone")
 router.register("water-table", DistributionGroupViewSet, basename="water-table")
+router.register("water-shapes", WaterShapeViewSet, basename="water-shape")
+router.register("complaint-points", ComplaintPointViewSet, basename="complaint-point")
 router.register("complaints", ComplaintViewSet, basename="complaint")
 router.register("urgent-complaints", UrgentComplaintViewSet, basename="urgent-complaint")
 router.register("users", UserViewSet, basename="user")
@@ -44,6 +49,7 @@ urlpatterns = [
     path("api/dev/otp/request/", OtpRequestView.as_view(), name="dev-otp-request"),
     path("api/dev/otp/verify/", OtpVerifyView.as_view(), name="dev-otp-verify"),
     path("api/dev/content/<str:key>/", ContentItemView.as_view(), name="dev-content"),
+    path("api/locations/find-building/", FindBuildingView.as_view(), name="find-building"),
     path("api/", include(router.urls)),
     path("django-admin/", admin.site.urls),
 ]

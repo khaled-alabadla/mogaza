@@ -224,8 +224,11 @@ export default function WaterSchedulePage() {
       await waterTableApi.update(editing.row.id, payload)
       toast.success('تم حفظ التعديلات.')
     } else {
-      await waterTableApi.create(payload)
-      toast.success('تمت إضافة الموعد.')
+      const saved = await waterTableApi.create(payload)
+      // the same days as an existing row: the addresses went into that row
+      if (!saved.merged) toast.success('تمت إضافة الموعد.')
+      else if (saved.added) toast.success(`أُضيفت العناوين إلى موعد «${saved.days_text}» الموجود.`)
+      else toast.success(`العناوين موجودة أصلاً في موعد «${saved.days_text}».`)
     }
     setEditing(null)
     load()

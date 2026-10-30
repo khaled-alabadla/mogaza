@@ -38,10 +38,11 @@ class WaterTableTests(APITestCase):
 
     def test_editor_crud_with_audit(self):
         self.client.force_authenticate(self.editor)
-        res = self.client.post(URL, {"days": [6, 2, 2], "areas": [" حي جديد ", "", "حي جديد", "شارع آخر"]}, format="json")
+        res = self.client.post(URL, {"days": [6, 4, 4], "areas": [" حي جديد ", "", "حي جديد", "شارع آخر"]}, format="json")
         self.assertEqual(res.status_code, 201, res.data)
+        self.assertFalse(res.data["merged"])
         gid = res.data["id"]
-        self.assertEqual(res.data["days"], [2, 6])
+        self.assertEqual(res.data["days"], [4, 6])
         self.assertEqual([a["name"] for a in res.data["area_list"]], ["حي جديد", "شارع آخر"])
 
         res = self.client.patch(f"{URL}{gid}/", {"areas": ["شارع آخر", "إضافة"], "note": "مؤقت"}, format="json")
@@ -55,6 +56,23 @@ class WaterTableTests(APITestCase):
         actions = list(AuditLog.objects.filter(entity_type="watertable", entity_id=str(gid))
                        .order_by("id").values_list("action", flat=True))
         self.assertEqual(actions, ["CREATE", "UPDATE", "UPDATE", "DELETE"])
+
+    def test_same_days_are_added_to_their_row(self):
+        self.client.force_authenticate(self.editor)
+        row = next(g for g in DistributionGroup.objects.all() if sorted(g.days) == [1, 5])  # الأحد / الخميس
+        count = DistributionGroup.objects.count()
+        before = row.areas.count()
+        res = self.client.post(URL, {"days": [5, 1], "areas": ["حي التجربة", "حي التجربة 2"]}, format="json")
+        self.assertEqual(res.status_code, 200, res.data)
+        self.assertEqual((res.data["merged"], res.data["added"], res.data["id"]), (True, 2, row.pk))
+        self.assertEqual([a["name"] for a in res.data["area_list"]][-2:], ["حي التجربة", "حي التجربة 2"])
+        self.assertEqual(DistributionGroup.objects.count(), count)  # no second row
+        self.assertEqual(row.areas.count(), before + 2)
+        # already listed: nothing added, nothing logged
+        res = self.client.post(URL, {"days": [1, 5], "areas": ["حي التجربة"]}, format="json")
+        self.assertEqual((res.data["merged"], res.data["added"]), (True, 0))
+        logs = AuditLog.objects.filter(entity_type="watertable", entity_id=str(row.pk)).values_list("action", flat=True)
+        self.assertEqual(list(logs), ["UPDATE"])
 
     def test_validation(self):
         self.client.force_authenticate(self.editor)
@@ -84,7 +102,7 @@ class WaterSourceTests(APITestCase):
         self.client.force_authenticate(self.editor)
 
     def test_areas_keep_their_source(self):
-        res = self.client.post(URL, {"days": [0, 3], "areas": [
+        res = self.client.post(URL, {"days": [4, 6], "areas": [
             {"name": "النديم", "source": "mekorot"},
             {"name": "عين جالوت", "source": "wells"},
             "نادي الزيتون",                                    # plain string = unclassified

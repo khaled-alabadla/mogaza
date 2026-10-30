@@ -189,3 +189,35 @@ class DistributionArea(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class WaterShape(models.Model):
+    """
+    An area drawn on «الخريطة» that gets its water with one row of the distribution table: the map
+    colours it by that row's days («تصلها المياه اليوم»). Kept apart from the row's addresses (which are
+    replaced whenever the row is edited), so editing the table never loses a drawing.
+    """
+
+    group = models.ForeignKey(DistributionGroup, on_delete=models.CASCADE, related_name="shapes",
+                              verbose_name="موعد التوزيع")
+    name = models.CharField("اسم المنطقة", max_length=200)
+    # [[[lat, lng], …], …]: the outline (one ring, or a few for separate parts), WGS84
+    rings = models.JSONField("الحدود")
+    created_at = models.DateTimeField("تاريخ الإضافة", auto_now_add=True)
+    updated_at = models.DateTimeField("آخر تعديل", auto_now=True)
+    created_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+", verbose_name="أضيف بواسطة")
+    updated_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+", verbose_name="عُدّل بواسطة")
+
+    class Meta:
+        verbose_name = "منطقة مياه مرسومة"
+        verbose_name_plural = "مناطق المياه المرسومة"
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.name
+
+    def snapshot(self):
+        return {"name": self.name, "group": self.group_id, "days": self.group.days_text,
+                "points": sum(len(ring) for ring in self.rings or [])}

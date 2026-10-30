@@ -393,6 +393,14 @@ class CoordinatesTests(LocationTestBase):
             res = self.client.post(URL, full_location(**{"place_name": "خطأ", **bad}), format="json")
             self.assertEqual(res.status_code, 400, bad)
 
+    def test_the_ones_without_coordinates(self):
+        self.council.latitude, self.council.longitude = "31.522500", "34.444000"
+        self.council.save()
+        self.client.force_authenticate(self.viewer)
+        names = [r["place_name"] for r in self.client.get(URL, {"no_coordinates": "1", "page_size": 50}).data["results"]]
+        self.assertNotIn("مجلس الوزراء", names)
+        self.assertEqual(len(names), Location.active.filter(latitude__isnull=True).count())
+
     def test_points_for_the_map(self):
         self.council.latitude, self.council.longitude = "31.522500", "34.444000"
         self.council.save()
@@ -427,3 +435,53 @@ class CoordinatesDataTests(LocationTestBase):
         fill(apps, None)
         unknown.refresh_from_db()
         self.assertIsNone(unknown.latitude)  # not in the file
+
+
+class FindBuildingTests(LocationTestBase):
+    """«الخريطة»: a building found from its numbers — one of ours at once, else looked up (remembered)."""
+
+    FIND = "/api/locations/find-building/"
+
+    def setUp(self):
+        super().setUp()
+        from django.core.cache import cache
+        cache.clear()
+        self.client.force_authenticate(self.viewer)
+
+    def test_one_of_ours_needs_no_lookup(self):
+        from unittest import mock
+        self.council.latitude, self.council.longitude = "31.522500", "34.444000"
+        self.council.save()
+        with mock.patch("apps.locations.building_lookup.lookup_building") as lookup:
+            res = self.client.get(self.FIND, {"building": "95", "street": "١٠٥٠"})
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual((res.data["found"], res.data["latitude"], res.data["location"]["place_name"]),
+                         (True, 31.5225, "مجلس الوزراء"))
+        lookup.assert_not_called()
+
+    def test_unknown_numbers_are_looked_up_once_and_remembered(self):
+        from unittest import mock
+        with mock.patch("apps.locations.building_lookup.lookup_building", return_value=(31.51, 34.46)) as lookup:
+            first = self.client.get(self.FIND, {"building": "8", "street": "1786"})
+            again = self.client.get(self.FIND, {"building": "8", "street": "1786"})
+        self.assertEqual(first.data, {"building_number": "8", "street_number": "1786", "found": True,
+                                      "latitude": 31.51, "longitude": 34.46, "location": None})
+        self.assertEqual(again.data["latitude"], 31.51)
+        lookup.assert_called_once_with("8", "1786")
+        # nowhere does the answer say where it came from
+        self.assertNotIn("gaza", str(first.data).lower())
+
+    def test_not_found_bad_numbers_and_a_failing_lookup(self):
+        from unittest import mock
+        with mock.patch("apps.locations.building_lookup.lookup_building", return_value=None):
+            self.assertFalse(self.client.get(self.FIND, {"building": "9999", "street": "1"}).data["found"])
+        self.assertEqual(self.client.get(self.FIND, {"building": "8"}).status_code, 400)
+        self.assertEqual(self.client.get(self.FIND, {"building": "<b>", "street": "1"}).status_code, 400)
+        with mock.patch("apps.locations.building_lookup.lookup_building", side_effect=OSError("down")):
+            res = self.client.get(self.FIND, {"building": "7", "street": "70"})
+        self.assertEqual(res.status_code, 503)
+        self.assertNotIn("gaza", str(res.data).lower())
+
+    def test_needs_the_search_permission(self):
+        self.client.force_authenticate(None)
+        self.assertIn(self.client.get(self.FIND, {"building": "8", "street": "1786"}).status_code, (401, 403))
