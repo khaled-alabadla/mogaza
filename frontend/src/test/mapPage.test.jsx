@@ -215,7 +215,7 @@ describe("a location's card: copy the address, Google Maps, edit, move", () => {
     })
   }
 
-  it('copies the whole address on one line and links to Google Maps', async () => {
+  it('copies the whole address on one line', async () => {
     const writeText = vi.fn().mockResolvedValue()
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     renderMap()
@@ -223,7 +223,7 @@ describe("a location's card: copy the address, Google Maps, edit, move", () => {
     await userEvent.click(within(card).getByRole('button', { name: 'نسخ العنوان' }))
     // (+ «(… دوار …)», the nearest landmark, once the city's places have loaded)
     expect(writeText.mock.calls[0][0]).toMatch(/^مسجد الكنز - شارع الوحدة - حي الرمال الشمالي - رقم المبنى 122 - رقم الشارع 60310( - \(.+\))?$/)
-    expect(within(card).getByRole('link', { name: 'خرائط Google' })).toHaveAttribute('href', 'https://www.google.com/maps?q=31.5211,34.4512')
+    expect(within(card).queryByRole('link', { name: /Google/ })).not.toBeInTheDocument()
   })
 
   it('«تعديل» saves the location; «نقل النقطة» puts it where the map is clicked next', async () => {
@@ -359,6 +359,12 @@ describe('more of the map: unplaced locations, complaints', () => {
     await openLayers()
     await userEvent.click(await screen.findByRole('button', { name: /موقع بلا مكان على الخريطة/ }))
     const dialog = screen.getByRole('dialog', { name: 'مواقع بلا مكان على الخريطة' })
+    // a button copies its building and street numbers
+    const writeText = vi.fn().mockResolvedValue()
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'نسخ رقم المبنى والشارع لـ مدرسة بلا مكان' }))
+    expect(writeText).toHaveBeenCalledWith('مبنى 5 شارع 9')
+    expect(await within(dialog).findByText('تم النسخ')).toBeInTheDocument()
     await userEvent.click(within(dialog).getByText('مدرسة بلا مكان'))
     expect(screen.getByText(/اضغط على المكان الجديد لـ «مدرسة بلا مكان»/)).toBeInTheDocument()
     map.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 30, clientY: 30 }))

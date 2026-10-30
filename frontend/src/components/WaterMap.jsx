@@ -16,7 +16,7 @@ import RecordForm from './RecordForm'
 import { LOCATION_ADD_FIELDS, LOCATION_FIELDS, withNeighborhoodOptions } from './recordFields'
 import { DAYS } from './WaterRowForm'
 import WaterShapeForm from './WaterShapeForm'
-import { CursorIcon, DrawIcon, ExpandIcon, ExtentIcon, HandIcon, MegaphoneIcon, PinPlusIcon, RulerIcon, ShrinkIcon, ZoomInIcon, ZoomOutIcon } from './Icons'
+import { CheckIcon, CopyIcon, CursorIcon, DrawIcon, ExpandIcon, ExtentIcon, HandIcon, MegaphoneIcon, PinPlusIcon, RulerIcon, ShrinkIcon, ZoomInIcon, ZoomOutIcon } from './Icons'
 
 /*
  * «الخريطة»: the real map of Gaza City (OpenStreetMap, with the streets and places in Arabic),
@@ -374,13 +374,6 @@ function popupFor(result, actions) {
       () => {},
     ),
   )
-  if (result.at) {
-    const google = glyph(el('a', 'pc-action', 'خرائط Google'), ROUTE_GLYPH)
-    google.href = `https://www.google.com/maps?q=${result.at[0]},${result.at[1]}`
-    google.target = '_blank'
-    google.rel = 'noopener noreferrer'
-    foot.append(google)
-  }
   if (actions?.canEdit) {
     if (isOurs) {
       button('تعديل', EDIT_GLYPH, () => actions.edit(result.details))
@@ -401,7 +394,6 @@ const svgIcon = (paths, size = 14) =>
 const NOTE_GLYPH = svgIcon('<path d="M5 4h14v16H5z"/><path d="M9 9h6M9 13h6M9 17h3"/>', 13)
 const HOME_GLYPH = svgIcon('<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>', 13)
 const COMPASS_GLYPH = svgIcon('<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>', 13)
-const ROUTE_GLYPH = svgIcon('<path d="M12 21s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><path d="M9.5 9.5l5 0M12 7v5"/>', 13)
 const EDIT_GLYPH = svgIcon('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M14 6l4 4"/>', 13)
 const MOVE_GLYPH = svgIcon('<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>', 13)
 const PLUS_GLYPH = svgIcon('<path d="M12 5v14M5 12h14"/>', 13)
@@ -1354,6 +1346,16 @@ export default function WaterMap() {
       .catch(() => {})
     return () => controller.abort()
   }, [canAdd])
+  // «نسخ الأرقام»: the building and street numbers of an unplaced location (e.g. to look it up)
+  const [copiedId, setCopiedId] = useState(null)
+  const copyNumbers = (l) =>
+    copyText(`مبنى ${l.building_number || '—'} شارع ${l.street_number || '—'}`).then(
+      () => {
+        setCopiedId(l.id)
+        setTimeout(() => setCopiedId((id) => (id === l.id ? null : id)), 1500)
+      },
+      () => {},
+    )
   const unplacedShown = useMemo(() => {
     const terms = normalizeArabic(unplacedQuery).split(' ').filter(Boolean)
     return unplaced.filter((l) => terms.every((t) => normalizeArabic(`${l.place_name} ${l.description} ${l.building_number} ${l.street_number}`).includes(t)))
@@ -1670,10 +1672,10 @@ export default function WaterMap() {
         />
         <ul className="max-h-80 divide-y divide-line overflow-y-auto rounded-lg ring-1 ring-line">
           {unplacedShown.map((l) => (
-            <li key={l.id}>
+            <li key={l.id} className="flex items-center hover:bg-brand-50">
               <button
                 type="button"
-                className="block w-full px-3 py-2 text-start hover:bg-brand-50"
+                className="block min-w-0 flex-1 px-3 py-2 text-start"
                 onClick={() => {
                   setPlacing(false)
                   setMoving(l)
@@ -1686,6 +1688,20 @@ export default function WaterMap() {
                     .join(' · ')}
                 </span>
               </button>
+              {(l.building_number || l.street_number) && (
+                <button
+                  type="button"
+                  aria-label={`نسخ رقم المبنى والشارع لـ ${l.place_name}`}
+                  title="نسخ رقم المبنى والشارع"
+                  onClick={() => copyNumbers(l)}
+                  className={`me-2 flex flex-none items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold ring-1 transition-colors ${
+                    copiedId === l.id ? 'bg-brand-600 text-white ring-brand-600' : 'bg-white text-brand-700 ring-line hover:ring-brand-500'
+                  }`}
+                >
+                  {copiedId === l.id ? <CheckIcon className="h-3.5 w-3.5" /> : <CopyIcon className="h-3.5 w-3.5" />}
+                  {copiedId === l.id ? 'تم النسخ' : 'نسخ الأرقام'}
+                </button>
+              )}
             </li>
           ))}
           {!unplacedShown.length && <li className="px-3 py-3 text-sm text-muted">لا توجد نتائج.</li>}
