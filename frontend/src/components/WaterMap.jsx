@@ -47,6 +47,59 @@ const BASES = {
   },
 }
 const TILE_FAILS = 6 // failed tiles before the next address is tried
+const TILE_WAIT = 8000 // ms a map picture may take before it is asked for again
+const TILE_RETRIES = 3 // times a picture that failed / hung is asked for again (from the next address)
+
+/**
+ * A tile layer that doesn't leave holes: a picture that fails or hangs is asked for again (from the next
+ * address, a little later each time). Leaflet keeps the previous level — stretched, so blurry — under the
+ * new one until every picture of the new one is in; one picture that never arrives kept it blurry.
+ */
+const SturdyTiles = L.TileLayer.extend({
+  initialize(urls, options) {
+    this._urls = urls
+    L.TileLayer.prototype.initialize.call(this, urls[0], options)
+  },
+  createTile(coords, done) {
+    const tile = L.TileLayer.prototype.createTile.call(this, coords, done)
+    tile._coords = coords
+    this._watch(tile, done)
+    return tile
+  },
+  _watch(tile, done) {
+    clearTimeout(tile._wait)
+    tile._wait = setTimeout(() => {
+      if (tile.isConnected && !tile.complete) this._tileOnError(done, tile)
+    }, TILE_WAIT)
+  },
+  _tileOnLoad(done, tile) {
+    clearTimeout(tile._wait)
+    L.TileLayer.prototype._tileOnLoad.call(this, done, tile)
+  },
+  _tileOnError(done, tile, e) {
+    clearTimeout(tile._wait)
+    const tries = (tile._tries || 0) + 1
+    if (tries > TILE_RETRIES || !tile.isConnected || !this._map) {
+      L.TileLayer.prototype._tileOnError.call(this, done, tile, e)
+      return
+    }
+    tile._tries = tries
+    setTimeout(() => {
+      if (!tile.isConnected || !this._map) return
+      const url = this._url
+      const at = this._urls.indexOf(url)
+      this._url = this._urls[(at + tries) % this._urls.length] // the next address (the same one when there's one)
+      const src = this.getTileUrl(tile._coords)
+      this._url = url
+      tile.src = src === tile.src ? `${src}${src.includes('?') ? '&' : '?'}r=${tries}` : src
+      this._watch(tile, done)
+    }, 500 * tries)
+  },
+  _onTileRemove(e) {
+    clearTimeout(e.tile._wait)
+    L.TileLayer.prototype._onTileRemove.call(this, e)
+  },
+})
 const READABLE_ZOOM = 16 // from here the map shows the street and place names
 
 const STYLE = { color: '#3f9d69', weight: 1.6, opacity: 0.7, fillColor: '#0f8a47', fillOpacity: 0.04 } // light green lines
@@ -516,12 +569,13 @@ export default function WaterMap() {
     const tiles = Object.fromEntries(
       Object.entries(BASES).map(([key, b]) => [
         key,
-        L.tileLayer(b.urls[0], {
+        new SturdyTiles(b.urls, {
           maxZoom: 19,
           maxNativeZoom: b.maxNativeZoom,
           className: b.className || '',
           keepBuffer: 4, // keep the pictures around the view: moving back shows them at once
           updateWhenZooming: false, // load the new level once the zoom ends (not every step of it)
+          updateWhenIdle: false, // and while dragging, not only after it: no grey edges behind a drag
           // the site sends no referrer by default; OpenStreetMap asks for one (the site's address only)
           referrerPolicy: 'strict-origin-when-cross-origin',
         }),
