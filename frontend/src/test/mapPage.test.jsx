@@ -13,10 +13,13 @@ vi.mock('../services/api', () => ({
   neighborhoodsApi: { list: vi.fn() },
   waterShapesApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
   waterTableApi: { list: vi.fn() },
+  waterSuppliesApi: { list: vi.fn(), create: vi.fn() },
   complaintPointsApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
 }))
 
-const { complaintPointsApi, locationsApi, neighborhoodsApi, waterShapesApi, waterTableApi } = await import('../services/api')
+const { complaintPointsApi, locationsApi, neighborhoodsApi, waterShapesApi, waterSuppliesApi, waterTableApi } = await import(
+  '../services/api'
+)
 const { default: MapPage } = await import('../pages/MapPage')
 
 const MOSQUE = {
@@ -67,6 +70,11 @@ beforeEach(() => {
   ])
 
   waterShapesApi.list.mockResolvedValue({ today: 0, results: [NADEEM] })
+  waterSuppliesApi.list.mockResolvedValue([
+    { id: 1, kind: 'mekorot', name: 'خط ماكروت', broken: false },
+    { id: 2, kind: 'well', name: 'بئر الشيخ رضوان', broken: false },
+  ])
+  waterSuppliesApi.create.mockImplementation(async ({ name }) => ({ id: 3, kind: 'well', name, broken: false }))
   waterTableApi.list.mockResolvedValue({
     results: [
       { id: 1, days: [0, 3], days_text: 'السبت / الثلاثاء', area_list: [{ name: 'النديم' }, { name: 'عين جالوت' }] },
@@ -448,18 +456,22 @@ describe('«جدول المياه» on the map', () => {
     renderMap()
     const map = await findMap()
     await waitFor(() => expect(waterAreas(map)).toHaveLength(1))
-    expect(waterAreas(map)[0]).toHaveAttribute('fill', '#0ea5e9') // water on Saturday
+    expect(waterAreas(map)[0]).toHaveAttribute('fill', '#1d4ed8') // water on Saturday
     await openLayers()
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'يوم المياه' }), '2') // Monday: water on Tuesday
-    expect(waterAreas(map)[0]).toHaveAttribute('fill', '#7dd3fc')
+    expect(waterAreas(map)[0]).toHaveAttribute('fill', '#bae6fd')
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'يوم المياه' }), '1') // Sunday: none
-    expect(waterAreas(map)[0]).toHaveAttribute('fill', '#94a3b8')
+    expect(waterAreas(map)[0]).toHaveAttribute('fill', '#bae6fd')
     await userEvent.click(screen.getByRole('switch', { name: 'مناطق المياه' }))
     expect(waterAreas(map)).toHaveLength(0)
   })
 
   it('«رسم»: clicks outline an area; «إنهاء» asks for its row of the table and name, then it is on the map', async () => {
-    waterShapesApi.create.mockImplementation(async (data) => ({ id: 6, ...data, days: [1, 5], days_text: 'الأحد / الخميس' }))
+    waterShapesApi.create.mockImplementation(async (data) => {
+      const saved = { id: 6, ...data, days: [1, 5], days_text: 'الأحد / الخميس', supply_info: { id: 3, kind: 'well', name: 'بئر الصفا', broken: true } }
+      waterShapesApi.list.mockResolvedValue({ today: 0, results: [NADEEM, saved] })
+      return saved
+    })
     renderMap()
     const map = await findMap()
     await waitFor(() => expect(waterTableApi.list).toHaveBeenCalled())
@@ -480,14 +492,43 @@ describe('«جدول المياه» on the map', () => {
     expect(within(dialog).getByText(/سيُضاف موعد جديد/)).toBeInTheDocument()
     await userEvent.click(within(dialog).getByRole('button', { name: 'الجمعة' }))
     await userEvent.type(within(dialog).getByLabelText(/اسم المنطقة/), 'البلدة القديمة')
+    // a time per day (optional): half a time is refused
+    await userEvent.type(within(dialog).getByLabelText('الأحد من'), '08:00')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'حفظ المنطقة' }))
+    expect(await within(dialog).findByText(/أكمل وقت يوم الأحد/)).toBeInTheDocument()
+    expect(waterShapesApi.create).not.toHaveBeenCalled()
+    await userEvent.type(within(dialog).getByLabelText('الأحد إلى'), '12:00')
+    await userEvent.type(within(dialog).getByLabelText('الخميس من'), '12:00')
+    await userEvent.type(within(dialog).getByLabelText('الخميس إلى'), '16:00')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'حفظ المنطقة' }))
+    // the water source is required: local wells → pick one, or add a new one
+    expect(await within(dialog).findByText('اختر مصدر المياه.')).toBeInTheDocument()
+    expect(waterShapesApi.create).not.toHaveBeenCalled()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'الآبار المحلية' }))
+    const wells = within(dialog).getByLabelText(/اسم البئر/, { selector: 'select' })
+    await waitFor(() => expect(within(wells).getByRole('option', { name: 'بئر الشيخ رضوان' })).toBeInTheDocument())
+    await userEvent.click(within(dialog).getByRole('button', { name: '+ إضافة بئر جديد' }))
+    await userEvent.type(within(dialog).getByLabelText('اسم البئر الجديد'), 'بئر الصفا')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'إضافة' }))
+    await waitFor(() => expect(wells).toHaveValue('3'))
+    expect(waterSuppliesApi.create).toHaveBeenCalledWith({ name: 'بئر الصفا' })
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: /يوجد عطل في بئر الصفا/ }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'حفظ المنطقة' }))
     await waitFor(() => expect(waterShapesApi.create).toHaveBeenCalled())
     const sent = waterShapesApi.create.mock.calls[0][0]
-    expect(sent).toMatchObject({ water_days: [1, 5], name: 'البلدة القديمة' })
+    expect(sent).toMatchObject({
+      water_days: [1, 5],
+      name: 'البلدة القديمة',
+      times: { 1: ['08:00', '12:00'], 5: ['12:00', '16:00'] },
+      supply: 3,
+      supply_broken: true,
+    })
     expect(sent.rings[0]).toHaveLength(3)
     await waitFor(() => expect(waterAreas(map)).toHaveLength(2))
+    // its source is out of order: a red dashed outline
+    await waitFor(() => expect(waterAreas(map).some((p) => p.getAttribute('stroke') === '#dc2626')).toBe(true))
     expect(map.querySelectorAll('.leaflet-sketch-pane path')).toHaveLength(0) // the outline is gone
-  })
+  }, 20000)
 
   it('only those who may edit the water table get «رسم»', async () => {
     auth.perms = new Set(['water.view'])
@@ -524,5 +565,18 @@ describe('gazaStreets.json (from OpenStreetMap)', () => {
         }
       }
     }
+  })
+})
+
+describe('water times', () => {
+  it('"13:30" reads «1:30 م»; an area time on a day', async () => {
+    const { clockText, waterTime } = await import('../components/WaterMap')
+    expect(clockText('08:00')).toBe('8:00 ص')
+    expect(clockText('13:30')).toBe('1:30 م')
+    expect(clockText('00:15')).toBe('12:15 ص')
+    expect(clockText('12:00')).toBe('12:00 م')
+    const shape = { days: [1, 5], times: { 1: ['08:00', '12:00'] } }
+    expect(waterTime(shape, 1)).toBe('من 8:00 ص إلى 12:00 م')
+    expect(waterTime(shape, 5)).toBe('')
   })
 })

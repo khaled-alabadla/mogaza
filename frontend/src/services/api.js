@@ -103,6 +103,8 @@ export const neighborhoodsApi = crud('neighborhoods')
 export const waterTableApi = crud('water-table')
 /** Water areas drawn on «الخريطة» (each tied to a row of the table): `list` → { today, results }. */
 export const waterShapesApi = crud('water-shapes')
+/** The water sources of the drawn areas: خط ماكروت and the local wells (`list` → a plain array). */
+export const waterSuppliesApi = crud('water-supplies')
 /**
  * Complaints and inquiries (`kind`): list adds `pending_count`. `exportUrl` is a formatted .xlsx of
  * every record matching the same filters (kind required).

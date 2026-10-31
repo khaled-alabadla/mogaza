@@ -191,6 +191,36 @@ class DistributionArea(models.Model):
         return self.name
 
 
+class WaterSupply(models.Model):
+    """
+    Where a drawn water area gets its water: «خط ماكروت» (one row) or one of the local wells (editors add
+    their names). «يوجد عطل» is set on the supply itself: every area it feeds shows the fault.
+    """
+
+    class Kind(models.TextChoices):
+        MEKOROT = "mekorot", "خط ماكروت"
+        WELL = "well", "بئر محلي"
+
+    kind = models.CharField("النوع", max_length=10, choices=Kind.choices, default=Kind.WELL)
+    name = models.CharField("الاسم", max_length=120, unique=True)
+    broken = models.BooleanField("يوجد عطل", default=False)
+    created_at = models.DateTimeField("تاريخ الإضافة", auto_now_add=True)
+    updated_at = models.DateTimeField("آخر تعديل", auto_now=True)
+    created_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
+                                   related_name="+", verbose_name="أضيف بواسطة")
+
+    class Meta:
+        verbose_name = "مصدر مياه"
+        verbose_name_plural = "مصادر المياه"
+        ordering = ["kind", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def snapshot(self):
+        return {"kind": self.kind, "name": self.name, "broken": self.broken}
+
+
 class WaterShape(models.Model):
     """
     An area drawn on «الخريطة» that gets its water with one row of the distribution table: the map
@@ -203,6 +233,10 @@ class WaterShape(models.Model):
     name = models.CharField("اسم المنطقة", max_length=200)
     # [[[lat, lng], …], …]: the outline (one ring, or a few for separate parts), WGS84
     rings = models.JSONField("الحدود")
+    # {"0": ["08:00", "12:00"], …}: when the water comes on each of its days (a day may have none)
+    times = models.JSONField("أوقات وصول المياه", default=dict, blank=True)
+    supply = models.ForeignKey(WaterSupply, null=True, blank=True, on_delete=models.PROTECT, related_name="shapes",
+                               verbose_name="مصدر المياه")
     created_at = models.DateTimeField("تاريخ الإضافة", auto_now_add=True)
     updated_at = models.DateTimeField("آخر تعديل", auto_now=True)
     created_by = models.ForeignKey("accounts.User", null=True, blank=True, on_delete=models.SET_NULL,
@@ -220,4 +254,5 @@ class WaterShape(models.Model):
 
     def snapshot(self):
         return {"name": self.name, "group": self.group_id, "days": self.group.days_text,
-                "points": sum(len(ring) for ring in self.rings or [])}
+                "times": self.times, "supply": self.supply.name if self.supply_id else None,
+                "broken": self.supply.broken if self.supply_id else None, "points": sum(len(ring) for ring in self.rings or [])}

@@ -129,10 +129,9 @@ const SPOTS_ZOOM = 15
 // a city place this close to one of our locations with the same name is that location (its numbers shown)
 const SAME_PLACE_METRES = 150
 
-// «جدول المياه» on the map: a drawn area on the chosen day — water that day / the next day / not
-const WATER_ON = { pane: 'water', color: '#0369a1', weight: 2, opacity: 0.9, fillColor: '#0ea5e9', fillOpacity: 0.35 }
-const WATER_NEXT = { pane: 'water', color: '#0ea5e9', weight: 1.5, opacity: 0.8, dashArray: '6 4', fillColor: '#7dd3fc', fillOpacity: 0.18 }
-const WATER_OFF = { pane: 'water', color: '#64748b', weight: 1.2, opacity: 0.6, fillColor: '#94a3b8', fillOpacity: 0.1 }
+// «جدول المياه» on the map: a drawn area on the chosen day — dark blue when water comes that day, light blue otherwise
+const WATER_ON = { pane: 'water', color: '#1e3a8a', weight: 2.2, opacity: 0.95, fillColor: '#1d4ed8', fillOpacity: 0.5 }
+const WATER_OFF = { pane: 'water', color: '#38bdf8', weight: 1.4, opacity: 0.8, fillColor: '#bae6fd', fillOpacity: 0.35 }
 // the outline being drawn with «رسم»
 const SKETCH_LINE = { pane: 'sketch', color: '#0369a1', weight: 2.5, interactive: false }
 const SKETCH_RUBBER = { pane: 'sketch', color: '#0369a1', weight: 2, dashArray: '5 5', opacity: 0.8, interactive: false }
@@ -140,13 +139,28 @@ const SKETCH_FILL = { pane: 'sketch', stroke: false, fillColor: '#0ea5e9', fillO
 const SKETCH_VERTEX = { pane: 'sketch', radius: 4, color: '#0369a1', weight: 2, fillColor: '#fff', fillOpacity: 1, bubblingMouseEvents: false }
 const SKETCH_FIRST = { ...SKETCH_VERTEX, radius: 7, fillColor: '#0ea5e9' } // a click on it closes the area
 
+/** "13:30" → "1:30 م" */
+export function clockText(hhmm) {
+  const [h, m] = hhmm.split(':').map(Number)
+  return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'ص' : 'م'}`
+}
+
+/** The water time of a drawn area on `day`: "من 8:00 ص إلى 12:00 م", or '' when it has none. */
+export function waterTime(shape, day) {
+  const window = shape.times?.[day]
+  return window ? `من ${clockText(window[0])} إلى ${clockText(window[1])}` : ''
+}
+
 /** On `day`: 'on' (water that day), 'next' (the day after) or 'off'. */
 export function waterStatus(days, day) {
   if (days.includes(day)) return 'on'
   if (days.includes((day + 1) % 7)) return 'next'
   return 'off'
 }
-const WATER_STYLE = { on: WATER_ON, next: WATER_NEXT, off: WATER_OFF }
+const WATER_STYLE = { on: WATER_ON, next: WATER_OFF, off: WATER_OFF }
+// its source (خط ماكروت / a well) is out of order: a red dashed outline over the blue
+const WATER_BROKEN = { color: '#dc2626', weight: 2.6, opacity: 1, dashArray: '7 5' }
+const waterStyle = (shape, day) => ({ ...WATER_STYLE[waterStatus(shape.days, day)], ...(shape.supply_info?.broken ? WATER_BROKEN : {}) })
 
 /** The card of a drawn water area: its name, whether water comes on the chosen day, its days; editors can change it. */
 function waterCard(shape, day, today, actions) {
@@ -170,12 +184,30 @@ function waterCard(shape, day, today, actions) {
     next: day === today ? 'تصلها المياه غداً' : `تصلها المياه يوم ${DAYS[(day + 1) % 7]}`,
     off: `لا تصلها المياه ${when}`,
   }[status]
-  names.append(el('span', `search-card-badge is-${status}`, label))
+  const at = { on: waterTime(shape, day), next: waterTime(shape, (day + 1) % 7), off: '' }[status]
+  names.append(el('span', `search-card-badge is-${status}`, at ? `${label} ${at}` : label))
   head.append(icon, names)
   box.append(head)
   const days = el('p', 'search-card-hood')
   days.append(el('span', 'search-card-hood-label', 'أيام المياه'), el('span', '', shape.days_text))
   box.append(days)
+  const supply = shape.supply_info
+  if (supply) {
+    const source = el('p', 'search-card-hood')
+    source.append(
+      el('span', 'search-card-hood-label', supply.kind === 'well' ? 'البئر' : 'مصدر المياه'),
+      el('span', '', supply.name),
+    )
+    box.append(source)
+    if (supply.broken) box.append(el('p', 'water-fault', `يوجد عطل في ${supply.name}، وقد لا تصل المياه في موعدها.`))
+  }
+  // each day with its time
+  const timed = shape.days.filter((d) => shape.times?.[d])
+  if (timed.length) {
+    const list = el('ul', 'water-times')
+    for (const d of shape.days) list.append(el('li', d === day ? 'is-day' : '', `${DAYS[d]}: ${waterTime(shape, d) || 'بدون وقت محدد'}`))
+    box.append(list)
+  }
   if (actions?.canEdit) {
     const row = el('div', 'search-card-actions')
     const edit = el('button', '', 'تعديل')
@@ -759,7 +791,7 @@ export default function WaterMap() {
       water.clearLayers()
       if (!visible) return
       for (const shape of list) {
-        const area = L.polygon(shape.rings, WATER_STYLE[waterStatus(shape.days, onDay)]).addTo(water)
+        const area = L.polygon(shape.rings, waterStyle(shape, onDay)).addTo(water)
         area.bindTooltip(`${shape.name} · ${shape.days_text}`, { sticky: true, direction: 'top', offset: [0, -8], className: 'hood-tip' })
         area.bindPopup(() => waterCard(shape, onDay, todayIndex, waterActionsRef.current), POPUP)
       }
@@ -1224,9 +1256,21 @@ export default function WaterMap() {
       const saved = await waterShapesApi.update(shapeForm.shape.id, payload)
       setShapes((list) => list.map((s) => (s.id === saved.id ? saved : s)))
       toast.success('تم حفظ المنطقة.')
+      // a fault set / cleared on its source shows on every area that source feeds
+      if (Boolean(shapeForm.shape.supply_info?.broken) !== Boolean(saved.supply_info?.broken) || shapeForm.shape.supply !== saved.supply) {
+        waterShapesApi
+          .list()
+          .then((data) => setShapes(data.results || []))
+          .catch(() => {})
+      }
     } else {
       const saved = await waterShapesApi.create({ ...payload, rings: [shapeForm.ring] })
       setShapes((list) => [...list, saved])
+      // its source's fault box may have changed the other areas that source feeds
+      waterShapesApi
+        .list()
+        .then((data) => setShapes(data.results || []))
+        .catch(() => {})
       api.current.sketch?.clear()
       toast.success(`تمت إضافة المنطقة إلى موعد «${saved.days_text}» في جدول المياه.`)
     }

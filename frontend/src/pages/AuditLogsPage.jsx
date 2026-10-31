@@ -40,6 +40,7 @@ const ENTITY_LABELS = {
   waterzone: 'منطقة مياه',
   waterslot: 'موعد مياه',
   watershape: 'منطقة مياه على الخريطة',
+  watersupply: 'مصدر مياه (ماكروت / بئر)',
   complaintpoint: 'شكوى على الخريطة',
 }
 

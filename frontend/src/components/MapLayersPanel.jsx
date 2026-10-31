@@ -215,13 +215,13 @@ export default function MapLayersPanel({
               </select>
               <ul className="mt-2 space-y-1 text-[0.7rem] text-muted">
                 <li className="flex items-center gap-2">
-                  <span className="h-2.5 w-4 rounded-sm border-2 border-sky-700 bg-sky-500/40" /> تصلها المياه
+                  <span className="h-2.5 w-4 rounded-sm border-2 border-blue-900 bg-blue-700/50" /> موعد المياه في هذا اليوم
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="h-2.5 w-4 rounded-sm border-2 border-dashed border-sky-500 bg-sky-300/30" /> في اليوم التالي
+                  <span className="h-2.5 w-4 rounded-sm border-2 border-sky-400 bg-sky-200/50" /> لا تصلها في هذا اليوم
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="h-2.5 w-4 rounded-sm border-2 border-slate-500 bg-slate-400/20" /> لا تصلها
+                  <span className="h-2.5 w-4 rounded-sm border-2 border-dashed border-red-600" /> يوجد عطل في مصدرها
                 </li>
               </ul>
               {!counts.water && water.canDraw && <p className="mt-1.5 text-[0.68rem] text-muted">ارسمها بأداة «رسم» من شريط الأدوات.</p>}
