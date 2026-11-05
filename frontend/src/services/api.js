@@ -111,6 +111,7 @@ export const waterSuppliesApi = crud('water-supplies')
  */
 export const complaintsApi = {
   ...restorable('complaints'),
+  get: (id, signal) => api.get(`/complaints/${id}/`, { signal }).then((r) => r.data),
   markUploaded: (ids, uploaded = true) => api.post('/complaints/mark-uploaded/', { ids, uploaded }).then((r) => r.data),
   exportUrl: (params) => `/api/complaints/export/?${new URLSearchParams(params)}`,
 }

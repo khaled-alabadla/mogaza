@@ -32,7 +32,7 @@ EXPORT_COLUMNS = [
     ("phone", "رقم الجوال", 14, "text"),
     ("submitted_on", "تاريخ التقديم", 14, "day"),
     ("age_days", "مقدمة منذ (يوم)", 12, "number"),
-    ("notes", "ملاحظات", 45, "long"),
+    ("notes", "العنوان", 45, "long"),
 ]
 
 

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AddButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from '../components/EmptyState'
-import { CheckIcon, EditIcon, PrintIcon, RestoreIcon, SheetIcon, TrashIcon } from '../components/Icons'
+import { CheckIcon, EditIcon, PlusIcon, PrintIcon, RestoreIcon, SheetIcon, TrashIcon } from '../components/Icons'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
 import Pagination from '../components/Pagination'
@@ -17,7 +17,7 @@ import { useToast } from '../context/ToastContext'
 import useConfirmAction from '../hooks/useConfirmAction'
 import useDebouncedValue from '../hooks/useDebouncedValue'
 import usePagedList from '../hooks/usePagedList'
-import { complaintsApi, neighborhoodsApi } from '../services/api'
+import { complaintsApi } from '../services/api'
 import { parseApiError } from '../utils/errors'
 import { formatDateTime } from '../utils/format'
 import { filterParams, KINDS, UPLOAD_TABS } from './complaintKinds'
@@ -135,6 +135,7 @@ function ComplaintCard({ complaint: c, fields, canEdit, selected, onSelect, onTo
  */
 export function ComplaintsLog({ kind }) {
   const toast = useToast()
+  const navigate = useNavigate()
   const { can } = useAuth()
   const k = KINDS[kind]
   const canEdit = can(`${k.perm}.edit`)
@@ -146,25 +147,23 @@ export function ComplaintsLog({ kind }) {
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(() => new Set())
   const [editing, setEditing] = useState(null) // { complaint | null }
-  const [neighborhoodNames, setNeighborhoodNames] = useState([])
+  const [lists, setLists] = useState(null) // «نوع الاستفسار» and «الحي»
   const debounced = useDebouncedValue(search)
 
-  // the inquiry «الحي» select lists the known neighborhoods (only needed by the form)
-  const needNeighborhoods = kind === 'inquiry' && canEdit
+  // the lists of the inquiry form (a file of its own: only needed by those who add or edit)
+  const needLists = kind === 'inquiry' && canEdit
   useEffect(() => {
-    if (!needNeighborhoods) return undefined
-    const controller = new AbortController()
-    neighborhoodsApi
-      .list(undefined, controller.signal)
-      .then((list) => setNeighborhoodNames((Array.isArray(list) ? list : list.results || []).map((n) => n.name)))
+    if (!needLists) return undefined
+    let alive = true
+    import('../data/complaintOptions.json')
+      .then((m) => alive && setLists(m.default))
       .catch(() => {})
-    return () => controller.abort()
-  }, [needNeighborhoods])
-  const fields = useMemo(() => complaintFields(kind, neighborhoodNames), [kind, neighborhoodNames])
-  const formFields = useMemo(
-    () => complaintFields(kind, neighborhoodNames, editing?.complaint?.area),
-    [kind, neighborhoodNames, editing],
-  )
+    return () => {
+      alive = false
+    }
+  }, [needLists])
+  const fields = useMemo(() => complaintFields(kind), [kind])
+  const formFields = useMemo(() => complaintFields(kind, lists, editing?.complaint), [kind, lists, editing])
 
   const filters = useMemo(() => filterParams(kind, tab, debounced.trim()), [kind, tab, debounced])
   const params = useMemo(() => ({ ...filters, page, page_size: PAGE_SIZE }), [filters, page])
@@ -226,7 +225,14 @@ export function ComplaintsLog({ kind }) {
   const allOnPage = pageIds.length > 0 && pageIds.every((id) => selected.has(id))
   const openAdd = () => setEditing({ complaint: null })
   const searching = Boolean(debounced.trim())
-  const addButton = canEdit ? <AddButton onClick={openAdd}>{k.add}</AddButton> : null
+  const addButton = !canEdit ? null : k.addPath ? (
+    <Link className="btn btn-primary" to={k.addPath}>
+      <PlusIcon className="h-4 w-4" /> {k.add}
+    </Link>
+  ) : (
+    <AddButton onClick={openAdd}>{k.add}</AddButton>
+  )
+  const openEdit = (complaint) => (k.addPath ? navigate(`${k.path}/${complaint.id}/edit`) : setEditing({ complaint }))
 
   return (
     <div>
@@ -317,7 +323,7 @@ export function ComplaintsLog({ kind }) {
               selected={selected.has(c.id)}
               onSelect={select}
               onToggleUploaded={setUploaded}
-              onEdit={(complaint) => setEditing({ complaint })}
+              onEdit={openEdit}
               onDelete={deletion.ask}
             />
           ))}
@@ -331,7 +337,7 @@ export function ComplaintsLog({ kind }) {
             key={editing.complaint?.id ?? `new-${kind}`}
             fields={formFields}
             initial={editing.complaint || {}}
-            submitLabel={editing.complaint ? 'حفظ التعديلات' : k.add}
+            submitLabel={editing.complaint ? 'حفظ التعديلات' : k.submit || k.add}
             onSubmit={save}
             onCancel={() => setEditing(null)}
           />

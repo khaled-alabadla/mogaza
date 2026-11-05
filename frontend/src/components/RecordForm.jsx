@@ -12,13 +12,16 @@ import SearchableSelect from './SearchableSelect'
  * a select:   { name, label, type: 'select', options: [{ value, label }], emptyLabel, emptyValue, searchable }
  *             (`searchable`: a scrolling list that can be narrowed by typing, see SearchableSelect)
  *             (an empty select is submitted as `emptyValue`, null by default — '' for a text column)
+ *             (`fills: { field, texts }` on a searchable select: picking a value writes `texts[value]` into
+ *             `field`, unless the user has written something of their own there)
  * a checkbox: { name, label, type: 'checkbox' }  (submitted as true / false)
+ * `displayOnly`: shown disabled, for the look of the form; never filled in or submitted.
  * `suggestions` (an array of strings) offers them while typing, but any text is accepted.
  *
  * A select without options (e.g. its list failed to load) is neither shown nor submitted,
  * so a failed request never wipes a stored value.
  */
-export default function RecordForm({ fields: allFields, initial, submitLabel, onSubmit, onCancel }) {
+export default function RecordForm({ fields: allFields, initial, submitLabel, onSubmit, onCancel, pinActions = true }) {
   const fields = allFields.filter((f) => f.type !== 'select' || f.options?.length)
   const [values, setValues] = useState(() =>
     Object.fromEntries(allFields.map((f) => [f.name, initial?.[f.name] ?? (f.type === 'checkbox' ? false : '')])),
@@ -45,7 +48,7 @@ export default function RecordForm({ fields: allFields, initial, submitLabel, on
       if (f.required && !String(values[f.name] || '').trim()) clientErrors[f.name] = `${f.label} مطلوب.`
     }
     submit(clientErrors, () =>
-      onSubmit(Object.fromEntries(fields.map((f) => [f.name, toPayloadValue(f, values[f.name])]))),
+      onSubmit(Object.fromEntries(fields.filter((f) => !f.displayOnly).map((f) => [f.name, toPayloadValue(f, values[f.name])]))),
     )
   }
 
@@ -93,7 +96,17 @@ export default function RecordForm({ fields: allFields, initial, submitLabel, on
                   value={values[f.name]}
                   options={f.options}
                   placeholder={f.emptyLabel}
-                  onChange={(value) => setValues((v) => ({ ...v, [f.name]: value }))}
+                  onChange={(value) =>
+                    setValues((v) => {
+                      const next = { ...v, [f.name]: value }
+                      if (f.fills) {
+                        const { field, texts } = f.fills
+                        const written = String(v[field] || '').trim()
+                        if (!written || written === texts[v[f.name]]) next[field] = texts[value] || ''
+                      }
+                      return next
+                    })
+                  }
                   className={common.className}
                   aria-invalid={common['aria-invalid']}
                   aria-describedby={common['aria-describedby']}
@@ -117,6 +130,7 @@ export default function RecordForm({ fields: allFields, initial, submitLabel, on
                     dir={f.numeric ? 'ltr' : undefined}
                     placeholder={f.placeholder}
                     maxLength={f.maxLength}
+                    disabled={f.displayOnly}
                     list={f.suggestions?.length ? `${id}-list` : undefined}
                     autoComplete={f.suggestions?.length ? 'off' : undefined}
                     {...common}
@@ -134,7 +148,7 @@ export default function RecordForm({ fields: allFields, initial, submitLabel, on
           )
         })}
       </div>
-      <FormActions saving={saving} submitLabel={submitLabel} onCancel={onCancel} />
+      <FormActions saving={saving} submitLabel={submitLabel} onCancel={onCancel} pinned={pinActions} />
     </form>
   )
 }

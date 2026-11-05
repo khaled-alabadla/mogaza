@@ -48,6 +48,7 @@ describe('visibleLinks', () => {
       '/committees',
       '/circulars',
       '/urgent',
+      '/complaints/new',
       '/complaints',
       '/inquiries',
       '/daily-report',
@@ -60,7 +61,7 @@ describe('visibleLinks', () => {
     const can = (perm) => perm === 'complaints.view'
     expect(paths({ isAuthenticated: true, can })).toEqual(['/', '/complaints'])
     expect(visibleSections(viewer).map((s) => s.title)).toEqual(['الرئيسية', 'الخدمات']) // «الرئيسية» on its own
-    expect(visibleSections({ isAuthenticated: true, isAdmin: true }).map((s) => s.links.length)).toEqual([1, 6, 4, 2])
+    expect(visibleSections({ isAuthenticated: true, isAdmin: true }).map((s) => s.links.length)).toEqual([1, 6, 5, 2])
     expect(firstAllowedPath({ isAuthenticated: true, permissions: ['inquiries.view'] })).toBe('/')
     expect(firstAllowedPath({ isAuthenticated: false, publicSearch: true })).toBe('/search')
     expect(firstAllowedPath({ isAuthenticated: false })).toBeNull()

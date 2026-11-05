@@ -21,6 +21,13 @@ TEXT_FIELDS = {
 }
 # Number-like codes: letters and digits allowed («5A»), checked by code_text.
 CODE_FIELDS = {"building_number": "رقم المبنى", "street_number": "رقم الشارع", "subscription": "الاشتراك"}
+# Each kind needs these (as on the main system's forms); an older record without them can still be edited.
+REQUIRED_FIELDS = {
+    Complaint.Kind.COMPLAINT: {"national_id": "رقم الهوية", "name": "الاسم", "category": "نوع الشكوى",
+                               "details": "التفاصيل"},
+    Complaint.Kind.INQUIRY: {"name": "الاسم", "category": "نوع الاستفسار", "channel": "المصدر", "area": "الحي",
+                             "details": "نص الاستفسار"},
+}
 DETAILS_LIMIT = 3000
 EMPTY_RECORD = "أدخل بيانات الشكوى أو الاستفسار: حقل واحد على الأقل."
 
@@ -46,7 +53,7 @@ class ComplaintSerializer(TrackedSerializer):
             "kind": {"error_messages": {"invalid_choice": "اختر نوع الطلب: شكوى أو استفسار."}},
             "channel": {"required": False, "allow_blank": True,
                         "error_messages": {"invalid_choice": "اختر المصدر من القائمة."}},
-            # every data field is optional; national_id / phone are checked after Arabic digits and spaces
+            # national_id / phone are checked after Arabic digits and spaces
             # are normalized (validate_* below), so no raw max_length on them
             "national_id": {"required": False, "allow_blank": True, "max_length": None},
             "phone": {"required": False, "allow_blank": True, "max_length": None},
@@ -94,6 +101,16 @@ class ComplaintSerializer(TrackedSerializer):
         merged.update({f: attrs[f] for f in SEARCH_FIELDS if f in attrs})
         if not any(merged.get(f) for f in SEARCH_FIELDS):
             raise serializers.ValidationError(EMPTY_RECORD)
+        kind = attrs.get("kind", self.instance.kind if self.instance else Complaint.Kind.COMPLAINT)
+        missing = {}
+        for field, label in REQUIRED_FIELDS[kind].items():
+            stored = getattr(self.instance, field) if self.instance else ""
+            value = attrs.get(field, stored)
+            # a new record must have it; an older one only may not lose what it has
+            if not value and (self.instance is None or stored):
+                missing[field] = [f"{label} مطلوب."]
+        if missing:
+            raise serializers.ValidationError(missing)
         return attrs
 
 
@@ -126,7 +143,7 @@ class UrgentComplaintSerializer(TrackedSerializer):
         read_only_fields = ["id", "status", "resolved_at", "created_at", "updated_at"]
         extra_kwargs = {
             "phone": {"required": False, "allow_blank": True, "max_length": None},
-            "notes": {**_optional("الملاحظات", DETAILS_LIMIT), "max_length": DETAILS_LIMIT},
+            "notes": {**_optional("العنوان", DETAILS_LIMIT), "max_length": DETAILS_LIMIT},
             "submitted_on": {"required": False, "allow_null": True},
             **{field: _optional(label, UrgentComplaint._meta.get_field(field).max_length)
                for field, label in {"number": "رقم الشكوى", "name": "الاسم", "category": "نوع الشكوى"}.items()},

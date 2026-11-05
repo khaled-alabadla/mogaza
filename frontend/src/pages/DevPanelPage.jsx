@@ -237,7 +237,8 @@ function DevelopmentPages() {
   const value = useContentValue(WIP_KEY)
   const pages = Array.isArray(value) ? value : []
   const field = useContentField(WIP_KEY)
-  const links = NAV_SECTIONS.flatMap((s) => s.links).filter((l) => l.to !== '/')
+  // a page's switch covers everything under it («الشكاوى» includes «إضافة شكوى»)
+  const links = NAV_SECTIONS.flatMap((s) => s.links).filter((l) => l.to !== '/' && l.to.split('/').length === 2)
   const toggle = (to) => field.save(pages.includes(to) ? pages.filter((p) => p !== to) : [...pages, to])
   return (
     <section className="card p-4 sm:p-5">

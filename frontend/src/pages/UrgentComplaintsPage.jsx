@@ -3,6 +3,8 @@ import { AddButton } from '../components/ActionButtons'
 import AsyncContent from '../components/AsyncContent'
 import ConfirmDialog from '../components/ConfirmDialog'
 import EmptyState from '../components/EmptyState'
+import Field, { controlClass } from '../components/Field'
+import FormActions from '../components/FormActions'
 import { AlertIcon, CheckIcon, EditIcon, RestoreIcon, SheetIcon, TrashIcon } from '../components/Icons'
 import Modal from '../components/Modal'
 import PageHeader from '../components/PageHeader'
@@ -18,6 +20,7 @@ import useDebouncedValue from '../hooks/useDebouncedValue'
 import usePagedList from '../hooks/usePagedList'
 import { urgentApi } from '../services/api'
 import { parseApiError } from '../utils/errors'
+import { parseUrgentMessage } from '../utils/urgentMessage'
 
 const PAGE_SIZE = 25
 
@@ -34,8 +37,51 @@ const FIELDS = [
   { name: 'category', label: 'نوع الشكوى', maxLength: 150, third: true },
   { name: 'phone', label: 'رقم الجوال', maxLength: 16, numeric: true, inputMode: 'tel', third: true, placeholder: '0599123456' },
   { name: 'submitted_days_ago', label: 'مقدمة منذ (يوم)', maxLength: 4, numeric: true, inputMode: 'numeric', third: true, placeholder: '3' },
-  { name: 'notes', label: 'ملاحظات', maxLength: 3000, multiline: true, rows: 3 },
+  { name: 'notes', label: 'العنوان', maxLength: 3000, multiline: true, rows: 3 },
 ]
+
+/** Adding, first step: the message of مركز خدمات الجمهور is pasted, and fills the form shown next. */
+function PasteMessage({ onParsed, onManual, onCancel }) {
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    if (!message.trim()) {
+      setError('الصق نص الشكوى أولاً.')
+      return
+    }
+    const fields = parseUrgentMessage(message)
+    if (!fields) {
+      setError('لم نتعرف على هذا النص. تأكد أنه نص الشكوى كاملاً، أو أدخل البيانات يدوياً.')
+      return
+    }
+    onParsed(fields)
+  }
+
+  return (
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
+      <Field id="urgent-message" label="نص الشكوى" error={error}>
+        <textarea
+          id="urgent-message"
+          rows={9}
+          autoFocus
+          className={`${controlClass(error)} leading-relaxed`}
+          value={message}
+          placeholder={'شكوى رقم/…\nنوع الشكوى\nالعنوان\nالمواطن/ …\nرقم الجوال: …\n\nمقدمة منذ: … يوم'}
+          onChange={(e) => {
+            setMessage(e.target.value)
+            setError('')
+          }}
+        />
+      </Field>
+      <button type="button" className="text-sm font-semibold text-brand-700 hover:underline" onClick={onManual}>
+        إدخال البيانات يدوياً
+      </button>
+      <FormActions submitLabel="تعبئة الحقول" onCancel={onCancel} />
+    </form>
+  )
+}
 
 /** «منذ 3 أيام» with Arabic number agreement. */
 export function ageText(days) {
@@ -93,7 +139,7 @@ function UrgentRow({ item, canEdit, onToggle, onEdit, onDelete }) {
         </Detail>
         {item.notes && (
           <div className="col-span-full">
-            <dt className="text-xs text-muted">ملاحظات</dt>
+            <dt className="text-xs text-muted">العنوان</dt>
             <dd className="mt-1 rounded-lg bg-canvas px-3 py-2 text-sm leading-7 whitespace-pre-line text-ink">{item.notes}</dd>
           </div>
         )}
@@ -139,7 +185,7 @@ export default function UrgentComplaintsPage() {
   const [tab, setTab] = useState('unresolved')
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
-  const [editing, setEditing] = useState(null) // { item | null }
+  const [editing, setEditing] = useState(null) // { item | null, pasting, fields (read from the message) }
   const debounced = useDebouncedValue(search)
 
   const filters = useMemo(() => {
@@ -185,10 +231,12 @@ export default function UrgentComplaintsPage() {
     }
   }
 
-  const openAdd = () => setEditing({ item: null })
+  const openAdd = () => setEditing({ item: null, pasting: true })
   const addButton = canEdit ? <AddButton onClick={openAdd}>إضافة شكوى عاجلة</AddButton> : null
   const searching = Boolean(debounced.trim())
-  const initial = editing?.item ? { ...editing.item, submitted_days_ago: editing.item.age_days ?? '' } : {}
+  const initial = editing?.item
+    ? { ...editing.item, submitted_days_ago: String(editing.item.age_days ?? '') }
+    : editing?.fields || {}
 
   return (
     <div>
@@ -247,7 +295,14 @@ export default function UrgentComplaintsPage() {
       </AsyncContent>
 
       <Modal size="form" open={Boolean(editing)} title={editing?.item ? 'تعديل الشكوى العاجلة' : 'إضافة شكوى عاجلة'} onClose={() => setEditing(null)}>
-        {editing && (
+        {editing?.pasting && (
+          <PasteMessage
+            onParsed={(fields) => setEditing({ item: null, fields })}
+            onManual={() => setEditing({ item: null })}
+            onCancel={() => setEditing(null)}
+          />
+        )}
+        {editing && !editing.pasting && (
           <RecordForm
             key={editing.item?.id ?? 'new'}
             fields={FIELDS}

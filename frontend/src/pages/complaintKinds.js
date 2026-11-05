@@ -3,12 +3,13 @@ export const KINDS = {
   complaint: {
     perm: 'complaints',
     path: '/complaints',
+    addPath: '/complaints/new', // adding and editing have their own page (ComplaintFormPage)
     title: 'الشكاوى',
-    subtitle: 'سجّل شكاوى المواطنين أثناء تعطل النظام الرئيسي، ثم علّمها «تم الرفع» بعد إدخالها إليه.',
+    subtitle: 'الشكاوى المسجّلة أثناء تعطل النظام الرئيسي: علّمها «تم الرفع» بعد إدخالها إليه.',
     reportTitle: 'سجل الشكاوى',
     searchLabel: 'البحث في الشكاوى',
     add: 'إضافة شكوى',
-    addTitle: 'إضافة شكوى جديدة',
+    addTitle: 'إضافة شكوى',
     editTitle: 'تعديل الشكوى',
     created: 'تمت إضافة الشكوى.',
     deleted: 'تم حذف الشكوى.',
@@ -24,6 +25,7 @@ export const KINDS = {
     reportTitle: 'سجل الاستفسارات',
     searchLabel: 'البحث في الاستفسارات',
     add: 'إضافة استفسار',
+    submit: 'إضافة الاستفسار',
     addTitle: 'إضافة استفسار جديد',
     editTitle: 'تعديل الاستفسار',
     created: 'تمت إضافة الاستفسار.',

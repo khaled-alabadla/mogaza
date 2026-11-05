@@ -79,9 +79,9 @@ class UrgentComplaintTests(APITestCase):
         self.assertIn("الحالة: لم يتم الحل", ws["A2"].value)
         header = [c.value for c in ws[3]]
         self.assertEqual(header[:8], ["م", "رقم الشكوى", "اسم مقدم الشكوى", "نوع الشكوى", "رقم الجوال", "تاريخ التقديم",
-                                      "مقدمة منذ (يوم)", "ملاحظات"])
+                                      "مقدمة منذ (يوم)", "العنوان"])
         row = {label: cell for label, cell in zip(header, ws[4])}
         self.assertEqual(row["رقم الشكوى"].value, "00777")  # leading zeros kept
         self.assertEqual(row["مقدمة منذ (يوم)"].value, 4)
-        self.assertEqual(row["ملاحظات"].data_type, "s")  # no formula
+        self.assertEqual(row["العنوان"].data_type, "s")  # no formula
         self.assertEqual(len(header), 8)  # no status / resolved date / recorded-by columns

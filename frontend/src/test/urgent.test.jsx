@@ -19,6 +19,18 @@ vi.mock('../services/api', () => ({
 
 const { urgentApi } = await import('../services/api')
 const { default: UrgentComplaintsPage, ageText } = await import('../pages/UrgentComplaintsPage')
+const { parseUrgentMessage } = await import('../utils/urgentMessage')
+
+const MESSAGE = `شكوى رقم/56923
+صرف صحي - طفح صرف صحي
+الشيخ عجلين ـ شمال المسجد 70م.
+المواطن/ أحمد محمد سالم
+رقم الجوال: 0599000000
+
+مقدمة منذ: 0 يوم
+
+مركز خدمات الجمهور
+بلدية غزة`
 
 const ITEM = {
   id: 5,
@@ -61,7 +73,7 @@ describe('UrgentComplaintsPage', () => {
     expect(screen.getByRole('tab', { name: /لم يتم الحل/ })).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('منذ 8 أيام')).toBeInTheDocument()
     // every field is shown in the card (the number too); no «سُجّلت … بواسطة» line
-    for (const label of ['رقم الشكوى', 'اسم مقدم الشكوى', 'نوع الشكوى', 'رقم الجوال', 'مقدمة منذ', 'ملاحظات']) {
+    for (const label of ['رقم الشكوى', 'اسم مقدم الشكوى', 'نوع الشكوى', 'رقم الجوال', 'مقدمة منذ', 'العنوان']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
     expect(screen.getByText('12345')).toBeInTheDocument()
@@ -77,11 +89,43 @@ describe('UrgentComplaintsPage', () => {
     await screen.findByText('انقطاع مياه')
     await userEvent.click(screen.getAllByRole('button', { name: /إضافة شكوى عاجلة/ })[0])
     const dialog = screen.getByRole('dialog')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'إدخال البيانات يدوياً' }))
     await userEvent.type(within(dialog).getByLabelText(/^رقم الشكوى/), '777')
     await userEvent.type(within(dialog).getByLabelText(/^اسم مقدم الشكوى/), 'سعاد')
     await userEvent.type(within(dialog).getByLabelText(/مقدمة منذ/), '٣')
     await userEvent.click(within(dialog).getByRole('button', { name: 'إضافة الشكوى' }))
     expect(urgentApi.create.mock.calls[0][0]).toMatchObject({ number: '777', name: 'سعاد', submitted_days_ago: 3 })
+  })
+
+  it('pasting the message fills the form, to be checked and edited before saving', async () => {
+    urgentApi.create.mockResolvedValue({})
+    renderPage()
+    await screen.findByText('12345')
+    await userEvent.click(screen.getAllByRole('button', { name: /إضافة شكوى عاجلة/ })[0])
+    const dialog = screen.getByRole('dialog')
+    // not such a message: it says so and nothing is opened
+    const message = within(dialog).getByLabelText('نص الشكوى')
+    await userEvent.type(message, 'مرحبا')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'تعبئة الحقول' }))
+    expect(within(dialog).getByText(/لم نتعرف على هذا النص/)).toBeInTheDocument()
+    await userEvent.clear(message)
+    await userEvent.click(message)
+    await userEvent.paste(MESSAGE)
+    await userEvent.click(within(dialog).getByRole('button', { name: 'تعبئة الحقول' }))
+    expect(urgentApi.create).not.toHaveBeenCalled() // nothing is saved yet
+    expect(within(dialog).getByLabelText(/رقم الشكوى/)).toHaveValue('56923')
+    expect(within(dialog).getByLabelText(/اسم مقدم الشكوى/)).toHaveValue('أحمد محمد سالم')
+    expect(within(dialog).getByLabelText(/مقدمة منذ/)).toHaveValue('0')
+    await userEvent.type(within(dialog).getByLabelText(/اسم مقدم الشكوى/), ' معدل')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'إضافة الشكوى' }))
+    expect(urgentApi.create.mock.calls[0][0]).toMatchObject({
+      number: '56923',
+      name: 'أحمد محمد سالم معدل',
+      category: 'صرف صحي - طفح صرف صحي',
+      phone: '0599000000',
+      submitted_days_ago: 0,
+      notes: 'الشيخ عجلين ـ شمال المسجد 70م.',
+    })
   })
 
   it('marks a complaint as resolved', async () => {
@@ -99,5 +143,32 @@ describe('UrgentComplaintsPage', () => {
     expect(screen.queryByRole('button', { name: 'تم الحل' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /تعديل/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /تصدير Excel/ })).not.toBeInTheDocument()
+  })
+})
+
+describe('parseUrgentMessage', () => {
+  it('reads every field of the message; the place goes to the notes, the signature nowhere', () => {
+    expect(parseUrgentMessage(MESSAGE)).toEqual({
+      number: '56923',
+      category: 'صرف صحي - طفح صرف صحي',
+      notes: 'الشيخ عجلين ـ شمال المسجد 70م.',
+      name: 'أحمد محمد سالم',
+      phone: '0599000000',
+      submitted_days_ago: '0',
+    })
+  })
+
+  it('Arabic digits, spaces and Windows line ends make no difference; what is missing is left out', () => {
+    expect(parseUrgentMessage('شكوى رقم / ٥٦٩٢٣\r\n\r\nمياه - انقطاع مياه\r\nالمواطن: سعيد\r\nمقدمة منذ: ١٢ يوم')).toEqual({
+      number: '56923',
+      category: 'مياه - انقطاع مياه',
+      name: 'سعيد',
+      submitted_days_ago: '12',
+    })
+  })
+
+  it('another text is not read', () => {
+    expect(parseUrgentMessage('مرحبا، عندي شكوى')).toBeNull()
+    expect(parseUrgentMessage('')).toBeNull()
   })
 })

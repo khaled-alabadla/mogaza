@@ -59,7 +59,7 @@ export function SidebarNav({ sections, collapsed = false }) {
           <ul className="space-y-0.5">
             {section.links.map(({ to, label, icon: Icon }) => (
               <li key={to}>
-                <NavLink to={to} end={to === '/'} className={linkClass(collapsed)} title={collapsed ? label : undefined}>
+                <NavLink to={to} end={to === '/' || to === '/complaints'} className={linkClass(collapsed)} title={collapsed ? label : undefined}>
                   {({ isActive }) => (
                     <>
                       <Icon

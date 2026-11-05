@@ -41,46 +41,63 @@ export const CHANNELS = [
   { value: 'visit', label: 'زيارة' },
   { value: 'instagram', label: 'انستقرام' },
 ]
-const CHANNEL_FIELD = { name: 'channel', label: 'المصدر', type: 'select', options: CHANNELS, searchable: true, emptyLabel: 'اختر أو ابحث…', third: true }
+const CHANNEL_FIELD = { name: 'channel', label: 'المصدر', type: 'select', options: CHANNELS, searchable: true, emptyLabel: 'اختر أو ابحث…', emptyValue: '', third: true }
 
-/** «إضافة استفسار» */
+/**
+ * «إضافة استفسار»: the fields of the main system's form, with its required ones, two to a row.
+ * The lists of «نوع الاستفسار» and «الحي» are filled at runtime (see complaintFields).
+ */
 export const INQUIRY_FIELDS = [
-  ID_FIELD,
-  NAME_FIELD,
-  PHONE_FIELD,
-  { name: 'category', label: 'نوع الاستفسار', maxLength: 150, third: true },
-  CHANNEL_FIELD,
-  // the API stores the neighborhood's name as text: options are filled at runtime (see complaintFields)
-  { name: 'area', label: 'الحي', type: 'select', options: [], searchable: true, emptyLabel: 'اختر أو ابحث…', emptyValue: '', third: true },
-  { name: 'details', label: 'نص الاستفسار', maxLength: 3000, multiline: true, rows: 4, placeholder: 'اكتب نص الاستفسار بالتفصيل هنا…' },
-]
-
-/** «إضافة شكوى» */
-export const COMPLAINT_FIELDS = [
-  { name: 'hide_identity', label: 'إخفاء بيانات صاحب الشكوى', type: 'checkbox' },
-  // citizen
-  ID_FIELD,
-  NAME_FIELD,
-  PHONE_FIELD,
-  // place
-  { name: 'point', label: 'رقم النقطة', maxLength: 150, numeric: true, inputMode: 'numeric', third: true },
-  { name: 'building_number', label: 'مبنى', maxLength: 20, numeric: true, third: true, placeholder: '5A' },
-  { name: 'street_number', label: 'الشارع', maxLength: 20, numeric: true, third: true },
-  // the complaint
-  { name: 'category', label: 'نوع الشكوى', maxLength: 150, third: true },
-  CHANNEL_FIELD,
-  { name: 'address', label: 'العنوان', maxLength: 300, third: true },
-  { name: 'details', label: 'تفاصيل الشكوى', maxLength: 3000, multiline: true, rows: 4, placeholder: 'اكتب تفاصيل الشكوى هنا…' },
+  { ...ID_FIELD, third: false, half: true, placeholder: 'رقم الهوية...' },
+  { ...NAME_FIELD, third: false, half: true, required: true, placeholder: 'اسم المواطن...' },
+  { ...PHONE_FIELD, third: false, half: true, placeholder: '05xxxxxxxx' },
+  { name: 'category', label: 'نوع الاستفسار', required: true, type: 'select', options: [], searchable: true, emptyLabel: 'اختر نوع الاستفسار', emptyValue: '', half: true },
+  { ...CHANNEL_FIELD, third: false, half: true, required: true, emptyLabel: 'اختر المصدر' },
+  { name: 'area', label: 'الحي', required: true, type: 'select', options: [], searchable: true, emptyLabel: 'اختر الحي', emptyValue: '', half: true },
+  { name: 'details', label: 'نص الاستفسار', required: true, maxLength: 3000, multiline: true, rows: 4, placeholder: 'اكتب نص الاستفسار بالتفصيل هنا...' },
 ]
 
 /**
- * The form's fields for one kind. The inquiry «الحي» select lists the known neighborhood names;
- * `currentArea` (the edited record's value) is kept as an option even if it is not in that list,
- * so editing an older record never loses it.
+ * «إضافة شكوى»: the fields of the main system's form, in its order. `displayOnly` ones are there to look
+ * like that form: they can't be filled in and aren't stored.
+ * The long lists of «نوع الشكوى» and «المنطقة» are filled by the form's page (ComplaintFormPage).
  */
-export function complaintFields(kind, neighborhoodNames = [], currentArea = '') {
-  const fields = kind === 'inquiry' ? INQUIRY_FIELDS : COMPLAINT_FIELDS
-  const names = [...neighborhoodNames]
-  if (currentArea && !names.includes(currentArea)) names.unshift(currentArea)
-  return fields.map((f) => (f.name === 'area' ? { ...f, options: names.map((n) => ({ value: n, label: n })) } : f))
+export const COMPLAINT_FIELDS = [
+  { name: 'hide_identity', label: 'إخفاء بيانات صاحب الشكوى', type: 'checkbox' },
+  { name: 'submitter_type', label: 'مقدم الشكوى', displayOnly: true, placeholder: 'افراد', third: true },
+  { ...ID_FIELD, required: true },
+  { ...NAME_FIELD, required: true },
+  { name: 'point', label: 'رقم النقطة', maxLength: 150, numeric: true, inputMode: 'numeric', third: true },
+  PHONE_FIELD,
+  { name: 'building_number', label: 'مبنى', maxLength: 20, numeric: true, third: true, placeholder: '5A' },
+  { name: 'street_number', label: 'الشارع', maxLength: 20, numeric: true, third: true },
+  { name: 'subscription', label: 'اشتراك', maxLength: 50, numeric: true, third: true },
+  { name: 'category', label: 'نوع الشكوى', required: true, type: 'select', options: [], searchable: true, emptyLabel: 'اختر النوع', emptyValue: '', third: true },
+  { ...CHANNEL_FIELD, emptyLabel: 'اختر المصدر' },
+  { name: 'area', label: 'المنطقة', type: 'select', options: [], searchable: true, emptyLabel: 'اختر المنطقة', emptyValue: '', third: true },
+  { name: 'address', label: 'العنوان', maxLength: 300, third: true },
+  { name: 'receipt_prefix', label: 'رمز الإيصال', displayOnly: true, third: true },
+  { name: 'receipt_number', label: 'رقم الإيصال', displayOnly: true, third: true },
+  { name: 'exception_reason', label: 'سبب الاستثناء', displayOnly: true, placeholder: 'اختر السبب', third: true },
+  { name: 'title', label: 'عنوان الطلب', displayOnly: true },
+  { name: 'details', label: 'التفاصيل', required: true, maxLength: 3000, multiline: true, rows: 6, placeholder: 'اكتب تفاصيل الشكوى هنا…' },
+]
+
+/** A list as select options; a stored value that isn't in it (an older record) stays one, so it is never lost. */
+export function asOptions(names, current) {
+  return (current && !names.includes(current) ? [current, ...names] : names).map((n) => ({ value: n, label: n }))
+}
+
+/**
+ * The fields of one kind. With the lists (data/complaintOptions.json) and the edited record, they are the
+ * form's: an older record may lack a required field and can still be edited, it only can't lose what it has.
+ */
+export function complaintFields(kind, lists, record) {
+  if (kind !== 'inquiry') return COMPLAINT_FIELDS.filter((f) => !f.displayOnly)
+  return INQUIRY_FIELDS.map((f) => {
+    const required = f.required && (!record || Boolean(record[f.name]))
+    if (f.name === 'category') return { ...f, required, options: asOptions(lists?.categories || [], record?.category) }
+    if (f.name === 'area') return { ...f, required, options: asOptions(lists?.areas || [], record?.area) }
+    return { ...f, required }
+  })
 }

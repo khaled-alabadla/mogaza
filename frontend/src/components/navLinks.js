@@ -1,6 +1,6 @@
 import { useAuth } from '../context/AuthContext'
 import { authCan } from '../context/permissions'
-import { AlertIcon, BookIcon, GridIcon, MapIcon, ChartIcon, DropIcon, HomeIcon, InboxIcon, ListIcon, MegaphoneIcon, QuestionIcon, SearchIcon, UsersIcon } from './Icons'
+import { AlertIcon, BookIcon, GridIcon, MapIcon, ChartIcon, DropIcon, HomeIcon, InboxIcon, ListIcon, MegaphoneIcon, PlusIcon, QuestionIcon, SearchIcon, UsersIcon } from './Icons'
 
 /**
  * The site's sections (sidebar + footer + route-guard fallbacks). Adding a page = adding one entry:
@@ -27,6 +27,7 @@ export const NAV_SECTIONS = [
     title: 'الشكاوى والاستفسارات',
     links: [
       { to: '/urgent', label: 'الشكاوى العاجلة', short: 'العاجلة', icon: AlertIcon, perm: 'urgent.view' },
+      { to: '/complaints/new', label: 'إضافة شكوى', short: 'إضافة شكوى', icon: PlusIcon, perm: 'complaints.edit' },
       { to: '/complaints', label: 'الشكاوى', short: 'الشكاوى', icon: InboxIcon, perm: 'complaints.view' },
       { to: '/inquiries', label: 'الاستفسارات', short: 'الاستفسارات', icon: QuestionIcon, perm: 'inquiries.view' },
       { to: '/daily-report', label: 'التقرير اليومي', short: 'التقرير', icon: ChartIcon, perm: 'report.view' },

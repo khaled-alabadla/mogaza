@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const ALL_PERMS = [
@@ -17,17 +17,18 @@ vi.mock('../context/ToastContext', () => ({ useToast: () => ({ success: vi.fn(),
 vi.mock('../services/api', () => ({
   complaintsApi: {
     list: vi.fn(),
+    get: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     remove: vi.fn(),
     markUploaded: vi.fn(),
     exportUrl: (params) => `/api/complaints/export/?${new URLSearchParams(params)}`,
   },
-  neighborhoodsApi: { list: vi.fn() },
 }))
 
-const { complaintsApi, neighborhoodsApi } = await import('../services/api')
+const { complaintsApi } = await import('../services/api')
 const { default: ComplaintsPage } = await import('../pages/ComplaintsPage')
+const { default: ComplaintFormPage } = await import('../pages/ComplaintFormPage')
 const { default: InquiriesPage } = await import('../pages/InquiriesPage')
 const { default: ComplaintsReportPage } = await import('../pages/ComplaintsReportPage')
 
@@ -93,7 +94,6 @@ beforeEach(() => {
   vi.clearAllMocks()
   auth.perms = new Set(ALL_PERMS)
   complaintsApi.list.mockResolvedValue(page([COMPLAINT]))
-  neighborhoodsApi.list.mockResolvedValue([{ id: 1, name: 'الدرج' }, { id: 2, name: 'الزيتون' }])
 })
 
 describe('ComplaintsPage («الشكاوى»)', () => {
@@ -106,54 +106,13 @@ describe('ComplaintsPage («الشكاوى»)', () => {
     for (const text of ['محمد أحمد', '401234567', '0599123456', '5A', 'واتساب']) {
       expect(screen.getByText(text)).toBeInTheDocument()
     }
-    expect(screen.queryByText('منطقة قديمة')).not.toBeInTheDocument() // «المنطقة» is gone from complaints
+    expect(screen.getByText('منطقة قديمة')).toBeInTheDocument()
     expect(screen.getByText('بيانات صاحب الشكوى مخفية')).toBeInTheDocument()
     expect(screen.queryByText('اشتراك')).not.toBeInTheDocument() // empty fields are not listed
     expect(screen.getByText(/السطر الأول/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^إضافة شكوى/ })).toBeInTheDocument()
-  })
-
-  it('the complaint form has the requested fields, the 8 channels and sends kind=complaint', async () => {
-    complaintsApi.create.mockResolvedValue({})
-    renderAt(<ComplaintsPage />)
-    await screen.findByText('انقطاع مياه')
-    await userEvent.click(screen.getAllByRole('button', { name: /إضافة شكوى/ })[0])
-    const dialog = screen.getByRole('dialog')
-    expect(within(dialog).getByRole('heading', { name: 'إضافة شكوى جديدة' })).toBeInTheDocument()
-    for (const label of ['رقم النقطة', 'العنوان', 'تفاصيل الشكوى']) {
-      expect(within(dialog).getByLabelText(new RegExp(label))).toBeInTheDocument()
-    }
-    for (const removed of ['اشتراك', 'المنطقة', 'الحي', 'مقدم الشكوى', 'سبب الاستثناء', 'رقم الإيصال']) {
-      expect(within(dialog).queryByLabelText(new RegExp(removed))).not.toBeInTheDocument()
-    }
-    const source = within(dialog).getByLabelText(/^المصدر/)
-    expect(source).toHaveAttribute('role', 'combobox')
-    expect(await optionsOf(source)).toEqual([
-      'فيسبوك',
-      'تويتر',
-      'واتساب',
-      'موقع البلدية',
-      'اتصال هاتفي',
-      'تطبيق البلدية',
-      'زيارة',
-      'انستقرام',
-    ])
-    await choose(source, 'انستقرام')
-    await userEvent.click(within(dialog).getByLabelText('إخفاء بيانات صاحب الشكوى'))
-    await userEvent.type(within(dialog).getByLabelText(/^رقم الجوال/), '0569000000')
-    await userEvent.type(within(dialog).getByLabelText(/^مبنى/), '5A')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'إضافة شكوى' }))
-    const sent = complaintsApi.create.mock.calls[0][0]
-    expect(sent).toMatchObject({
-      kind: 'complaint',
-      hide_identity: true,
-      channel: 'instagram',
-      phone: '0569000000',
-      building_number: '5A',
-      national_id: '',
-    })
-    expect(sent).not.toHaveProperty('area')
-    expect(neighborhoodsApi.list).not.toHaveBeenCalled() // only inquiries need the neighborhoods
+    // adding is its own page: the list only links to it
+    expect(screen.getAllByRole('link', { name: /إضافة شكوى/ })[0]).toHaveAttribute('href', '/complaints/new')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('exports with the list filters (Excel link and PDF report link)', async () => {
@@ -178,18 +137,6 @@ describe('ComplaintsPage («الشكاوى»)', () => {
     )
   })
 
-  it('shows the server error for an empty record', async () => {
-    complaintsApi.create.mockRejectedValueOnce({
-      response: { status: 400, data: { non_field_errors: ['أدخل بيانات الشكوى أو الاستفسار: حقل واحد على الأقل.'] } },
-    })
-    renderAt(<ComplaintsPage />)
-    await screen.findByText('انقطاع مياه')
-    await userEvent.click(screen.getAllByRole('button', { name: /إضافة شكوى/ })[0])
-    const dialog = screen.getByRole('dialog')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'إضافة شكوى' }))
-    expect(await within(dialog).findByText('أدخل بيانات الشكوى أو الاستفسار: حقل واحد على الأقل.')).toBeInTheDocument()
-  })
-
   it('marks selected records as uploaded', async () => {
     complaintsApi.markUploaded.mockResolvedValue({ updated: 1 })
     renderAt(<ComplaintsPage />)
@@ -203,7 +150,8 @@ describe('ComplaintsPage («الشكاوى»)', () => {
     auth.perms = new Set(['complaints.view'])
     renderAt(<ComplaintsPage />)
     await screen.findByText('انقطاع مياه')
-    for (const name of [/إضافة شكوى/, /تعديل/, /حذف/, /^تم الرفع$/]) {
+    expect(screen.queryByRole('link', { name: /إضافة شكوى/ })).not.toBeInTheDocument()
+    for (const name of [/تعديل/, /حذف/, /^تم الرفع$/]) {
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
     }
     expect(screen.queryByLabelText('تحديد شكوى محمد أحمد')).not.toBeInTheDocument()
@@ -229,7 +177,7 @@ describe('ComplaintsPage («الشكاوى»)', () => {
 })
 
 describe('InquiriesPage («الاستفسارات»)', () => {
-  it('has its own list, form and «الحي» select of neighborhood names', async () => {
+  it('has its own list and the form of the main system, with its lists and required fields', async () => {
     complaintsApi.list.mockResolvedValue(page([]))
     complaintsApi.create.mockResolvedValue({})
     renderAt(<InquiriesPage />)
@@ -247,21 +195,35 @@ describe('InquiriesPage («الاستفسارات»)', () => {
     expect(within(dialog).getByRole('heading', { name: 'إضافة استفسار جديد' })).toBeInTheDocument()
     expect(within(dialog).queryByLabelText(/رقم النقطة/)).not.toBeInTheDocument() // complaint-only fields hidden
     expect(within(dialog).queryByLabelText(/اشتراك/)).not.toBeInTheDocument()
-    const area = within(dialog).getByLabelText(/^الحي/)
-    expect(await optionsOf(area)).toEqual(['الدرج', 'الزيتون'])
-    // typing part of a name narrows the list
-    await userEvent.type(area, 'زيت')
-    expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['الزيتون'])
-    await userEvent.keyboard('{Enter}')
-    expect(area).toHaveValue('الزيتون')
+    const area = await within(dialog).findByLabelText(/^الحي/)
+    const submit = within(dialog).getByRole('button', { name: 'إضافة الاستفسار' })
+    await userEvent.click(submit)
+    for (const message of ['الاسم مطلوب.', 'نوع الاستفسار مطلوب.', 'المصدر مطلوب.', 'الحي مطلوب.', 'نص الاستفسار مطلوب.']) {
+      expect(await within(dialog).findByText(message)).toBeInTheDocument()
+    }
+    expect(within(dialog).queryByText('رقم الهوية مطلوب.')).not.toBeInTheDocument()
+    expect(complaintsApi.create).not.toHaveBeenCalled()
+    // the main system's lists; typing part of a name narrows them
+    await userEvent.type(area, 'مسجد الشهداء')
+    expect(screen.getAllByRole('option').map((o) => o.textContent)).toContain('الزيتون - مسجد الشهداء')
+    await choose(area, 'الزيتون - مسجد الشهداء')
+    await choose(within(dialog).getByLabelText(/^نوع الاستفسار/), 'مياه - استفسار مياه')
     await choose(within(dialog).getByLabelText(/^المصدر/), 'زيارة')
-    await userEvent.type(within(dialog).getByLabelText(/نوع الاستفسار/), 'فاتورة')
+    await userEvent.type(within(dialog).getByLabelText(/^الاسم/), 'سارة')
     await userEvent.type(within(dialog).getByLabelText(/نص الاستفسار/), 'متى موعد المياه؟')
-    await userEvent.click(within(dialog).getByRole('button', { name: 'إضافة استفسار' }))
+    await userEvent.click(submit)
     const sent = complaintsApi.create.mock.calls[0][0]
-    expect(sent).toMatchObject({ kind: 'inquiry', category: 'فاتورة', channel: 'visit', area: 'الزيتون', details: 'متى موعد المياه؟' })
+    expect(sent).toMatchObject({
+      kind: 'inquiry',
+      national_id: '',
+      name: 'سارة',
+      category: 'مياه - استفسار مياه',
+      channel: 'visit',
+      area: 'الزيتون - مسجد الشهداء',
+      details: 'متى موعد المياه؟',
+    })
     expect(sent).not.toHaveProperty('point')
-  })
+  }, 15000)
 
   it('a record by the hidden account (no creator name) shows no «بواسطة»', async () => {
     complaintsApi.list.mockResolvedValue(page([{ ...INQUIRY, created_by_name: null, uploaded_by_name: null }]))
@@ -271,7 +233,7 @@ describe('InquiriesPage («الاستفسارات»)', () => {
     expect(screen.queryByText(/null/)).not.toBeInTheDocument()
   })
 
-  it('keeps a stored «الحي» that is not in the neighborhoods list when editing', async () => {
+  it('keeps a stored «الحي» that is not in the list when editing', async () => {
     complaintsApi.list.mockResolvedValue(page([INQUIRY]))
     complaintsApi.update.mockResolvedValue({})
     renderAt(<InquiriesPage />)
@@ -279,27 +241,28 @@ describe('InquiriesPage («الاستفسارات»)', () => {
     expect(screen.getByText('تطبيق البلدية')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /تعديل/ }))
     const dialog = screen.getByRole('dialog')
-    const area = within(dialog).getByLabelText(/^الحي/)
+    const area = await within(dialog).findByLabelText(/^الحي/)
     expect(area).toHaveValue('حي قديم')
-    expect(await optionsOf(area)).toEqual(['حي قديم', 'الدرج', 'الزيتون'])
+    expect((await optionsOf(area)).slice(0, 2)).toEqual(['حي قديم', 'البلاخية'])
     await userEvent.keyboard('{Escape}')
     expect(screen.getByRole('dialog')).toBeInTheDocument() // Escape closes the list, not the dialog
     await userEvent.click(within(dialog).getByRole('button', { name: 'حفظ التعديلات' }))
     expect(complaintsApi.update.mock.calls[0][1]).toMatchObject({ area: 'حي قديم', channel: 'app' })
   })
 
-  it('an emptied «الحي» is sent as an empty text', async () => {
+  it('a stored «الحي» can\u2019t be emptied, one that was never filled in can stay empty', async () => {
     complaintsApi.list.mockResolvedValue(page([INQUIRY]))
     complaintsApi.update.mockResolvedValue({})
     renderAt(<InquiriesPage />)
     await screen.findByText('حي قديم')
     await userEvent.click(screen.getByRole('button', { name: /تعديل/ }))
     const dialog = screen.getByRole('dialog')
-    const area = within(dialog).getByLabelText(/^الحي/)
+    const area = await within(dialog).findByLabelText(/^الحي/)
     await userEvent.click(within(area.parentElement).getByRole('button', { name: 'مسح الاختيار' }))
     expect(area).toHaveValue('')
     await userEvent.click(within(dialog).getByRole('button', { name: 'حفظ التعديلات' }))
-    expect(complaintsApi.update.mock.calls[0][1]).toMatchObject({ area: '' })
+    expect(await within(dialog).findByText('الحي مطلوب.')).toBeInTheDocument()
+    expect(complaintsApi.update).not.toHaveBeenCalled()
   })
 
   it('uses the inquiries rights', async () => {
@@ -310,7 +273,6 @@ describe('InquiriesPage («الاستفسارات»)', () => {
     expect(screen.queryByRole('button', { name: /إضافة استفسار/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /تعديل/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /تصدير/ })).not.toBeInTheDocument()
-    expect(neighborhoodsApi.list).not.toHaveBeenCalled()
   })
 })
 
@@ -356,14 +318,16 @@ describe('ComplaintsReportPage («تصدير PDF»)', () => {
       'إخفاء الهوية',
       'رقم الهوية',
       'الاسم',
-      'رقم الجوال',
       'رقم النقطة',
+      'رقم الجوال',
       'مبنى',
       'الشارع',
+      'اشتراك',
       'نوع الشكوى',
       'المصدر',
+      'المنطقة',
       'العنوان',
-      'تفاصيل الشكوى',
+      'التفاصيل',
       'الحالة',
       'تاريخ التسجيل',
     ])
@@ -372,21 +336,23 @@ describe('ComplaintsReportPage («تصدير PDF»)', () => {
     const first = within(rows[0])
       .getAllByRole('cell')
       .map((td) => td.textContent)
-    expect(first.slice(0, 12)).toEqual([
+    expect(first.slice(0, 15)).toEqual([
       '1',
       'نعم',
       '401234567',
       'محمد أحمد',
-      '0599123456',
       '12',
+      '0599123456',
       '5A',
       '1050',
+      '',
       'انقطاع مياه',
       'واتساب',
+      'منطقة قديمة',
       '',
       'السطر الأول\nالسطر الثاني',
+      'بانتظار الرفع',
     ])
-    expect(first[12]).toBe('بانتظار الرفع')
     expect(within(rows[1]).getByText('اتصال هاتفي')).toBeInTheDocument()
     await waitFor(() => expect(print).toHaveBeenCalledTimes(1)) // the print dialog opens by itself
   })
@@ -415,5 +381,112 @@ describe('ComplaintsReportPage («تصدير PDF»)', () => {
     ])
     expect(within(table).getByText('تطبيق البلدية')).toBeInTheDocument()
     expect(within(table).getByText('حي قديم')).toBeInTheDocument()
+  })
+})
+
+describe('ComplaintFormPage («إضافة شكوى»)', () => {
+  const renderForm = (url = '/complaints/new') =>
+    render(
+      <MemoryRouter initialEntries={[url]}>
+        <Routes>
+          <Route path="/complaints" element={<p>قائمة الشكاوى</p>} />
+          <Route path="/complaints/new" element={<ComplaintFormPage />} />
+          <Route path="/complaints/:id/edit" element={<ComplaintFormPage />} />
+        </Routes>
+      </MemoryRouter>,
+    )
+  const submit = () => userEvent.click(screen.getByRole('button', { name: 'حفظ الشكوى' }))
+
+  it('has the fields of the main system, none of its draft / transfer / attachment parts', async () => {
+    renderForm()
+    expect(screen.getByRole('heading', { name: 'إضافة شكوى' })).toBeInTheDocument()
+    for (const label of [
+      'إخفاء بيانات صاحب الشكوى',
+      'مقدم الشكوى',
+      'رقم الهوية',
+      'الاسم',
+      'رقم النقطة',
+      'رقم الجوال',
+      'مبنى',
+      'الشارع',
+      'اشتراك',
+      'نوع الشكوى',
+      'المصدر',
+      'المنطقة',
+      'العنوان',
+      'رمز الإيصال',
+      'رقم الإيصال',
+      'سبب الاستثناء',
+      'عنوان الطلب',
+      'التفاصيل',
+    ]) {
+      expect(screen.getByLabelText(new RegExp(`^${label}`))).toBeInTheDocument()
+    }
+    for (const gone of [/مسودة/, /تحويل/, /المرفقات/]) expect(screen.queryByText(gone)).not.toBeInTheDocument()
+    // for show only: nobody can fill these in
+    for (const label of ['مقدم الشكوى', 'رمز الإيصال', 'رقم الإيصال', 'سبب الاستثناء', 'عنوان الطلب']) {
+      expect(screen.getByLabelText(new RegExp(`^${label}`))).toBeDisabled()
+    }
+    expect(await optionsOf(screen.getByLabelText(/^نوع الشكوى/))).toContain('مياه - انقطاع مياه')
+    expect(await optionsOf(screen.getByLabelText(/^المنطقة/))).toContain('الشيخ رضوان - مدرسة الزهاوي')
+  })
+
+  it('asks for the required fields, then saves and goes to the list', async () => {
+    complaintsApi.create.mockResolvedValue({ id: 1 })
+    renderForm()
+    await submit()
+    for (const message of ['رقم الهوية مطلوب.', 'الاسم مطلوب.', 'نوع الشكوى مطلوب.', 'التفاصيل مطلوب.']) {
+      expect(await screen.findByText(message)).toBeInTheDocument()
+    }
+    expect(complaintsApi.create).not.toHaveBeenCalled()
+    await userEvent.type(screen.getByLabelText(/^رقم الهوية/), '401234567')
+    await userEvent.type(screen.getByLabelText(/^الاسم/), 'محمد')
+    await choose(screen.getByLabelText(/^نوع الشكوى/), 'مياه - غير ذلك')
+    await userEvent.type(screen.getByLabelText(/^التفاصيل/), 'منذ يومين')
+    await submit()
+    await screen.findByText('قائمة الشكاوى')
+    const sent = complaintsApi.create.mock.calls[0][0]
+    for (const shownOnly of ['submitter_type', 'receipt_prefix', 'receipt_number', 'exception_reason', 'title']) {
+      expect(sent).not.toHaveProperty(shownOnly)
+    }
+    expect(sent).toMatchObject({
+      kind: 'complaint',
+      national_id: '401234567',
+      name: 'محمد',
+      category: 'مياه - غير ذلك',
+      details: 'منذ يومين',
+      channel: '',
+      area: '',
+    })
+  }, 15000)
+
+  it('a type with a ready text fills «التفاصيل», without replacing what was written by hand', async () => {
+    renderForm()
+    const details = screen.getByLabelText(/^التفاصيل/)
+    await choose(screen.getByLabelText(/^نوع الشكوى/), 'مياه - انقطاع مياه')
+    expect(details.value).toBe(
+      'السيد/ م.م.ع المياه والصرف الصحي حفظه الله\nوردتنا شكوى بخصوص انقطاع مياه في العنوان المرفق، نرجو الإيعاز لعمل اللازم.\nمع التحية والتقدير\nقسم المعلومات والشكاوى',
+    )
+    // another type: its text replaces the ready one; a type without one leaves it empty
+    await choose(screen.getByLabelText(/^نوع الشكوى/), 'صحة - كلاب ضالة')
+    expect(details.value).toContain('كلاب ضالة')
+    await choose(screen.getByLabelText(/^نوع الشكوى/), 'مياه - غير ذلك')
+    expect(details).toHaveValue('')
+    // text written by hand stays
+    await userEvent.type(details, 'نص كتبته')
+    await choose(screen.getByLabelText(/^نوع الشكوى/), 'مياه - انقطاع مياه')
+    expect(details).toHaveValue('نص كتبته')
+  }, 15000)
+
+  it('edits a complaint on the same page; a stored type not in the lists is kept', async () => {
+    complaintsApi.get.mockResolvedValue(COMPLAINT)
+    complaintsApi.update.mockResolvedValue(COMPLAINT)
+    renderForm('/complaints/7/edit')
+    expect(await screen.findByRole('heading', { name: 'تعديل الشكوى' })).toBeInTheDocument()
+    expect(complaintsApi.get.mock.calls[0][0]).toBe('7')
+    expect(await screen.findByDisplayValue('انقطاع مياه')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'حفظ التعديلات' }))
+    await screen.findByText('قائمة الشكاوى')
+    expect(complaintsApi.update.mock.calls[0][1]).toMatchObject({ category: 'انقطاع مياه', area: 'منطقة قديمة' })
   })
 })

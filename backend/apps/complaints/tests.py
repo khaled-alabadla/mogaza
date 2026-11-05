@@ -17,8 +17,11 @@ PASSWORD = "S3cure-Pass-2026"
 VALID = {
     "kind": "complaint", "national_id": "401234567", "name": "محمد أحمد", "phone": "0599123456",
     "point": "نقطة الرمال", "building_number": "5A", "street_number": "1050", "category": "انقطاع مياه",
-    "address": "تل الهوا - شارع القدس",
+    "address": "تل الهوا - شارع القدس", "details": "لا تصل المياه منذ يومين",
 }
+
+INQUIRY = {"kind": "inquiry", "name": "سؤال", "category": "مياه - استفسار مياه", "channel": "phone", "area": "الدرج",
+           "details": "متى موعد المياه؟"}
 
 
 class ComplaintTests(APITestCase):
@@ -44,16 +47,29 @@ class ComplaintTests(APITestCase):
                                                 entity_id=str(data["id"])).exists())
 
     def test_inquiry_and_optional_fields(self):
-        data = self.create(kind="inquiry", point="", building_number="", street_number="", address="")
+        data = self.create(**INQUIRY, point="", building_number="", street_number="", address="")
         self.assertEqual(data["kind_display"], "استفسار")
 
-    def test_all_data_fields_are_optional(self):
+    def test_a_complaint_needs_the_required_fields_of_its_form(self):
         self.client.force_authenticate(self.editor)
         res = self.client.post(URL, {"phone": "0599123456"}, format="json")  # only a phone number
-        self.assertEqual(res.status_code, 201, res.data)
-        self.assertEqual((res.data["kind"], res.data["name"], res.data["national_id"]), ("complaint", "", ""))
-        res = self.client.post(URL, {"kind": "inquiry", "category": "استفسار عن موعد المياه"}, format="json")
-        self.assertEqual(res.status_code, 201, res.data)
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(set(res.data), {"national_id", "name", "category", "details"})
+        self.assertEqual(str(res.data["category"][0]), "نوع الشكوى مطلوب.")
+        # an older complaint without them can still be edited; what it has can't be emptied
+        pk = Complaint.objects.create(kind="complaint", phone="0599123456", name="قديم").pk
+        self.assertEqual(self.client.patch(f"{URL}{pk}/", {"phone": "0599000000"}, format="json").status_code, 200)
+        self.assertEqual(set(self.client.patch(f"{URL}{pk}/", {"name": ""}, format="json").data), {"name"})
+
+    def test_an_inquiry_needs_the_required_fields_of_its_form(self):
+        self.client.force_authenticate(self.editor)
+        res = self.client.post(URL, {"kind": "inquiry", "phone": "0599123456"}, format="json")
+        self.assertEqual(res.status_code, 400)
+        self.assertEqual(set(res.data), {"name", "category", "channel", "area", "details"})
+        self.assertEqual(self.client.post(URL, INQUIRY, format="json").status_code, 201)  # national_id is optional
+        # an older inquiry without them can still be edited
+        pk = Complaint.objects.create(kind="inquiry", name="قديم").pk
+        self.assertEqual(self.client.patch(f"{URL}{pk}/", {"phone": "0599000000"}, format="json").status_code, 200)
 
     def test_empty_record_is_rejected(self):
         self.client.force_authenticate(self.editor)
@@ -65,7 +81,7 @@ class ComplaintTests(APITestCase):
         pk = self.create()["id"]
         cleared = {field: "" for field in VALID if field != "kind"}
         self.assertEqual(self.client.patch(f"{URL}{pk}/", cleared, format="json").status_code, 400)
-        self.assertEqual(self.client.patch(f"{URL}{pk}/", {"name": ""}, format="json").status_code, 200)
+        self.assertEqual(self.client.patch(f"{URL}{pk}/", {"phone": ""}, format="json").status_code, 200)
 
     def test_filled_fields_are_still_validated(self):
         self.client.force_authenticate(self.editor)
@@ -83,7 +99,7 @@ class ComplaintTests(APITestCase):
 
     def test_list_filters_search_and_pending_count(self):
         a = self.create(name="سعيد خالد", kind="complaint")
-        self.create(name="هالة محمود", kind="inquiry", phone="0569000000")
+        self.create(**{**INQUIRY, "name": "هالة محمود"}, phone="0569000000")
         self.client.post(f"{URL}mark-uploaded/", {"ids": [a["id"]]}, format="json")
         res = self.client.get(URL, {"upload": "pending"})
         self.assertEqual([r["name"] for r in res.data["results"]], ["هالة محمود"])
@@ -129,7 +145,7 @@ class ComplaintTests(APITestCase):
     def test_export_xlsx_complaints(self):
         self.create(name="=HYPERLINK(1)", national_id="012345678", phone="0599123456", channel="instagram",
                     area="ليست للشكوى", details="سطر 1\nسطر 2")
-        self.create(name="هالة", kind="inquiry")
+        self.create(**{**INQUIRY, "name": "هالة"})
         res, ws = self.export(kind="complaint")
         self.assertEqual(res["Content-Type"], "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         disposition = res["Content-Disposition"]
@@ -141,11 +157,9 @@ class ComplaintTests(APITestCase):
         self.assertIn("سجل الشكاوى المؤقتة", ws["A1"].value)
         self.assertIn("عدد السجلات: 1", ws["A2"].value)
         header = [c.value for c in ws[3]]
-        self.assertEqual(header, ["م", "إخفاء بيانات صاحب الشكوى", "رقم الهوية", "الاسم", "رقم الجوال", "رقم النقطة",
-                                  "رقم المبنى", "رقم الشارع", "نوع الشكوى", "المصدر", "العنوان",
-                                  "تفاصيل الشكوى", "الحالة", "تاريخ التسجيل", "سجّلها", "تاريخ الرفع"])
-        self.assertNotIn("الحي / المنطقة", header)  # not on the complaint form any more
-        self.assertNotIn("الاشتراك", header)
+        self.assertEqual(header, ["م", "إخفاء بيانات صاحب الشكوى", "رقم الهوية", "الاسم", "رقم النقطة",
+                                  "رقم الجوال", "رقم المبنى", "رقم الشارع", "الاشتراك", "نوع الشكوى", "المصدر",
+                                  "المنطقة", "العنوان", "تفاصيل الشكوى", "الحالة", "تاريخ التسجيل", "سجّلها", "تاريخ الرفع"])
         self.assertEqual(ws.freeze_panes, "A4")
         self.assertEqual(ws.max_row, 4)  # one complaint, the inquiry is not exported
         row = {label: cell for label, cell in zip(header, ws[4])}
@@ -163,8 +177,8 @@ class ComplaintTests(APITestCase):
         self.assertIsNone(row["تاريخ الرفع"].value)
 
     def test_export_xlsx_inquiries_and_filters(self):
-        self.create(name="سعيد", kind="inquiry", area="الرمال", channel="visit")
-        self.create(name="هالة", kind="inquiry")
+        self.create(**{**INQUIRY, "name": "سعيد", "area": "الرمال", "channel": "visit"})
+        self.create(**{**INQUIRY, "name": "هالة"})
         self.create(name="شكوى")
         res, ws = self.export(kind="inquiry", search="سعيد", upload="pending")
         self.assertIn("filename*=UTF-8''" + quote("استفسارات_"), res["Content-Disposition"])
@@ -245,8 +259,8 @@ class InquiryAndComplaintFieldsTests(APITestCase):
         for field, value in (("hide_identity", True), ("subscription", "77-123"), ("channel_display", "واتساب"),
                              ("details", "منذ يومين")):
             self.assertEqual(res.data[field], value, field)
-        for removed in ("submitter_type", "receipt_prefix", "receipt_number", "exception_reason", "title"):
-            self.assertNotIn(removed, res.data)
+        for shown_only in ("submitter_type", "receipt_prefix", "receipt_number", "exception_reason", "title"):
+            self.assertNotIn(shown_only, res.data)  # on the form for show, not stored
         # the source is searchable by its Arabic label
         self.assertEqual(self.client.get(URL, {"search": "واتساب"}).data["count"], 1)
 
@@ -269,7 +283,7 @@ class InquiryAndComplaintFieldsTests(APITestCase):
                     ("phone", "اتصال هاتفي"), ("app", "تطبيق البلدية"), ("visit", "زيارة"), ("instagram", "انستقرام")]
         self.assertEqual(list(Complaint.Channel.choices), expected)
         for code, label in expected:
-            res = self.client.post(URL, {"kind": "inquiry", "channel": code, "name": "x"}, format="json")
+            res = self.client.post(URL, {**INQUIRY, "channel": code}, format="json")
             self.assertEqual(res.status_code, 201, res.data)
             self.assertEqual(res.data["channel_display"], label)
 
@@ -281,7 +295,7 @@ class ComplaintPermissionTests(APITestCase):
         editor = User.objects.create_user("ed", password=PASSWORD, role=User.Role.EDITOR)
         self.client.force_authenticate(editor)
         self.complaint = self.client.post(URL, VALID, format="json").data["id"]
-        self.inquiry = self.client.post(URL, {"kind": "inquiry", "name": "سؤال"}, format="json").data["id"]
+        self.inquiry = self.client.post(URL, INQUIRY, format="json").data["id"]
 
     def as_user(self, permissions, role=User.Role.EDITOR):
         user = User.objects.create_user(f"u{User.objects.count()}", password=PASSWORD, role=role,
@@ -305,7 +319,7 @@ class ComplaintPermissionTests(APITestCase):
     def test_inquiries_editor_cannot_touch_complaints(self):
         self.as_user(["inquiries.view", "inquiries.edit", "complaints.view"])
         self.assertEqual(self.client.post(URL, VALID, format="json").status_code, 403)  # a complaint
-        self.assertEqual(self.client.post(URL, {"kind": "inquiry", "name": "x"}, format="json").status_code, 201)
+        self.assertEqual(self.client.post(URL, INQUIRY, format="json").status_code, 201)
         self.assertEqual(self.client.patch(f"{URL}{self.complaint}/", {"name": "x"}, format="json").status_code, 403)
         self.assertEqual(self.client.delete(f"{URL}{self.complaint}/").status_code, 403)
         # an inquiry cannot be turned into a complaint either

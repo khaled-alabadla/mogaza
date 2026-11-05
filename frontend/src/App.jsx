@@ -23,6 +23,7 @@ if (window.location.pathname === '/search') loadDashboard().catch(() => {})
 const WaterSchedulePage = lazyPage(() => import('./pages/WaterSchedulePage'))
 const MapPage = lazyPage(() => import('./pages/MapPage'))
 const ComplaintsPage = lazyPage(() => import('./pages/ComplaintsPage'))
+const ComplaintFormPage = lazyPage(() => import('./pages/ComplaintFormPage'))
 const InquiriesPage = lazyPage(() => import('./pages/InquiriesPage'))
 const GuidePage = lazyPage(() => import('./pages/GuidePage'))
 const CommitteesPage = lazyPage(() => import('./pages/CommitteesPage'))
@@ -159,6 +160,22 @@ export default function App() {
                     element={
                       <RequirePermission perm="complaints.view">
                         <ComplaintsPage />
+                      </RequirePermission>
+                    }
+                  />
+                  <Route
+                    path="complaints/new"
+                    element={
+                      <RequirePermission perm="complaints.edit">
+                        <ComplaintFormPage />
+                      </RequirePermission>
+                    }
+                  />
+                  <Route
+                    path="complaints/:id/edit"
+                    element={
+                      <RequirePermission perm="complaints.edit">
+                        <ComplaintFormPage />
                       </RequirePermission>
                     }
                   />

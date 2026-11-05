@@ -16,7 +16,7 @@ class Complaint(TrackedModel):
     """
     A complaint or inquiry recorded here while the municipality's main complaints system is down.
     It stays «بانتظار الرفع» until staff enter it into the main system and mark it «تم الرفع».
-    Every data field is optional (whatever the caller could give); only the kind is always set.
+    Each kind needs the required fields of its form (see the serializer).
     """
 
     class Kind(models.TextChoices):

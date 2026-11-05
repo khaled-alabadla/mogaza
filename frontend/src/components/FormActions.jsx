@@ -1,7 +1,11 @@
-/** Cancel + submit row shared by every modal form: pinned to the bottom of the (same-size) form window. */
-export default function FormActions({ saving, submitLabel, onCancel }) {
+/**
+ * Cancel + submit row shared by every form: in a modal it is pinned to the bottom of the (same-size) form
+ * window; on a page of its own (`pinned={false}`) it simply comes after the last field.
+ */
+export default function FormActions({ saving, submitLabel, onCancel, pinned = true }) {
+  const place = pinned ? 'sticky bottom-0 z-10 -mx-5 mt-auto bg-white px-5 py-4' : 'pt-4'
   return (
-    <div className="sticky bottom-0 z-10 -mx-5 mt-auto flex flex-col-reverse gap-2 border-t border-line bg-white px-5 py-4 sm:flex-row sm:justify-end">
+    <div className={`flex flex-col-reverse gap-2 border-t border-line sm:flex-row sm:justify-end ${place}`}>
       <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
         إلغاء
       </button>
