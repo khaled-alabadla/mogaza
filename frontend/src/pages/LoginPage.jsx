@@ -25,8 +25,6 @@ function Ornament() {
   )
 }
 
-const creditsGrid = 'grid grid-cols-2 gap-4 text-center text-xs leading-relaxed'
-
 export default function LoginPage() {
   const { login, isAuthenticated, loading, publicSearch } = useAuth()
   const navigate = useNavigate()
@@ -61,9 +59,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1.1fr_1fr]">
+    <div className="grid min-h-screen lg:grid-cols-2">
       {/* Identity panel with the dedication "أثرٌ جميل ... قبل الرحيل" */}
-      <aside className="relative flex flex-col items-center justify-center overflow-hidden bg-brand-800 px-6 py-10 text-white lg:py-16">
+      <aside className="relative flex flex-col items-center justify-center overflow-hidden bg-brand-800 px-6 py-10 text-white lg:py-10">
         <div className="harlequin" aria-hidden="true" />
         <div
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgb(10_107_56/0.55),transparent_70%)]"
@@ -73,10 +71,10 @@ export default function LoginPage() {
 
         <div className="relative flex flex-col items-center text-center">
           <div className="rounded-2xl bg-white p-3 shadow-lg ring-1 ring-white/20 lg:p-4">
-            <img src={logo} alt="شعار بلدية غزة" className="h-24 w-auto lg:h-40" width="87" height="160" decoding="async" />
+            <img src={logo} alt="شعار بلدية غزة" className="h-24 w-auto lg:h-32" width="87" height="160" decoding="async" />
           </div>
 
-          <figure className="mt-8 lg:mt-12">
+          <figure className="mt-8 lg:mt-9">
             <blockquote className="font-ruqaa leading-tight" lang="ar">
               <p className="quote-reveal text-5xl text-white drop-shadow-sm sm:text-6xl lg:text-7xl">{quote1}</p>
               <div className="quote-reveal my-3 lg:my-5">
@@ -87,7 +85,7 @@ export default function LoginPage() {
           </figure>
         </div>
 
-        <Credits className={`${creditsGrid} relative mt-12 hidden w-full max-w-md text-white/70 lg:mt-16 lg:grid`} />
+        <Credits className="relative mt-12 hidden w-full max-w-md lg:mt-10 lg:flex" />
       </aside>
 
       {/* Sign-in form */}
@@ -188,7 +186,7 @@ export default function LoginPage() {
             </p>
           )}
 
-          <Credits className={`${creditsGrid} mt-10 text-muted lg:hidden`} />
+          <Credits tone="light" className="mt-10 lg:hidden" />
         </div>
       </main>
     </div>

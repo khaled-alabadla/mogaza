@@ -15,7 +15,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import useConfirmAction from '../hooks/useConfirmAction'
 import { waterTableApi } from '../services/api'
-import { normalizeArabic } from '../utils/arabic'
+import { matchesTerms, normalizeArabic } from '../utils/arabic'
 import { parseApiError } from '../utils/errors'
 import { formatDateTime } from '../utils/format'
 import { useText } from '../context/ContentContext'
@@ -163,7 +163,7 @@ export default function WaterSchedulePage() {
     if (!terms.length) return searchable.map(({ row }) => ({ row, matches: null }))
     return searchable
       .map(({ row, dayText, areas }) => {
-        const matches = new Set(areas.filter((a) => terms.every((t) => a.text.includes(t))).map((a) => a.id))
+        const matches = new Set(areas.filter((a) => matchesTerms(a.text, terms)).map((a) => a.id))
         const dayHit = terms.every((t) => dayText.includes(t))
         return matches.size || dayHit ? { row, matches: dayHit ? null : matches } : null
       })
@@ -200,7 +200,7 @@ export default function WaterSchedulePage() {
     const found = new Map()
     for (const { row, areas } of searchable) {
       areas.forEach((a, i) => {
-        if (!terms.every((t) => a.text.includes(t))) return
+        if (!matchesTerms(a.text, terms)) return
         const area = row.area_list[i]
         const entry = found.get(area.name) || { name: area.name, source: area.source_display && area.source ? area.source_display : '', days: new Set() }
         row.days.forEach((d) => entry.days.add(d))

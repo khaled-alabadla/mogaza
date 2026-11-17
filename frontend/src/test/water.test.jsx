@@ -203,6 +203,18 @@ describe('WaterSchedulePage', () => {
     expect(screen.getAllByText('مدرسة موسى بن نصير')).toHaveLength(2) // the answer card + the table
   })
 
+  it('finds an address from a part of it, with or without «ال» or a space', async () => {
+    renderPage()
+    await screen.findByText('الدرج')
+    const box = screen.getByLabelText('البحث في جدول المياه')
+    for (const query of ['بن نص', 'نصير موسى', 'المدرسة', 'بننصير', 'مدرسه موسي']) {
+      await userEvent.clear(box)
+      await userEvent.type(box, query)
+      expect(screen.getAllByText('مدرسة موسى بن نصير').length, query).toBeGreaterThan(1)
+      expect(screen.queryByText('النديم'), query).not.toBeInTheDocument()
+    }
+  })
+
   it('hides editing controls for viewers', async () => {
     auth.edit = false
     renderPage()
