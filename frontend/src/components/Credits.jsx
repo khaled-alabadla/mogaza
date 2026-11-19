@@ -40,8 +40,9 @@ export default function Credits({ className = '', tone = 'dark' }) {
           key={c.name}
           className={`flex min-h-[4.25rem] basis-[calc(50%-0.375rem)] flex-col justify-center rounded-2xl px-3 py-3 ${t.card}`}
         >
-          <p className={`text-xs font-semibold tracking-wide ${t.role}`}>{c.role}</p>
-          <p className={`mt-1 text-base font-bold ${t.name}`}>{c.name}</p>
+          <p className={`text-xs font-semibold ${t.role}`}>{c.role}</p>
+          {/* the names in the calligraphic font of the page's dedication («أثرٌ جميل») */}
+          <p className={`mt-1 font-ruqaa text-xl leading-snug ${t.name}`}>{c.name}</p>
         </div>
       ))}
     </div>

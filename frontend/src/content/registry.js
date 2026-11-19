@@ -26,7 +26,7 @@ export const CONTENT_GROUPS = [
   {
     title: 'فريق العمل',
     fields: [
-      { key: 'credits.1.role', label: 'الأول: الدور', default: 'تصميم وبرمجة النظام' },
+      { key: 'credits.1.role', label: 'الأول: الدور', default: 'تم تصميم وبرمجة وتطوير النظام بواسطة' },
       { key: 'credits.1.name', label: 'الأول: الاسم', default: 'المهندس بلال سمير قنوع' },
       { key: 'credits.2.role', label: 'الثاني: الدور', default: 'تم جمع البيانات بواسطة' },
       { key: 'credits.2.name', label: 'الثاني: الاسم', default: 'الأستاذ سليمان معين حبيب' },
