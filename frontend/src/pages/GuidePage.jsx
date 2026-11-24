@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import GuideBlocks from '../components/GuideBlocks'
 import { BookIcon, ChevronDownIcon, ExternalIcon, MapIcon, PlusIcon, QuestionIcon, RestoreIcon, SearchIcon, UsersIcon } from '../components/Icons'
+import { IntroVideoCard } from '../components/IntroVideo'
 import PageHeader from '../components/PageHeader'
 import { useContentValue, useText } from '../context/ContentContext'
 import { GUIDE_DEFAULT } from './guideSections'
@@ -224,6 +225,7 @@ export default function GuidePage() {
   return (
     <div>
       <PageHeader title={title} subtitle={subtitle} />
+      <IntroVideoCard className="mb-4" />
 
       <div className="grid items-start gap-4 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-6">
         <SectionNav sections={sections} value={section.id} onChange={(id) => setSearchParams({ tab: id }, { replace: true })} />

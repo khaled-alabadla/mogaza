@@ -12,6 +12,8 @@ export const CONTENT_GROUPS = [
     fields: [
       { key: 'brand.name', label: 'اسم القسم', default: 'قسم المعلومات والشكاوي' },
       { key: 'brand.org', label: 'اسم الجهة', default: 'بلدية غزة' },
+      // shown on the login page and in «دليل القسم»; empty hides it
+      { key: 'site.intro_video', label: 'رابط الفيديو التعريفي (يوتيوب)', default: 'https://www.youtube.com/watch?v=ab_4_zdStFQ' },
     ],
   },
   {

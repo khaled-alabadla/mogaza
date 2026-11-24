@@ -5,6 +5,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import logo from '../assets/logo-320.webp'
 import Credits from '../components/Credits'
 import Field, { controlClass } from '../components/Field'
+import { IntroVideoButton } from '../components/IntroVideo'
 import FormAlert from '../components/FormAlert'
 import { ArrowLeftIcon, EyeIcon, EyeOffIcon, LockIcon, UserIcon } from '../components/Icons'
 import LoadingState from '../components/LoadingState'
@@ -185,6 +186,10 @@ export default function LoginPage() {
               </button>
             </p>
           )}
+
+          <div className="mt-6 text-center">
+            <IntroVideoButton />
+          </div>
 
           <Credits tone="light" className="mt-10 lg:hidden" />
         </div>

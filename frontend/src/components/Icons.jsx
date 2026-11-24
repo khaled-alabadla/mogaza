@@ -22,6 +22,11 @@ export const SearchIcon = (p) => (
     <path d="m20 20-3.5-3.5" />
   </Svg>
 )
+export const PlayIcon = (p) => (
+  <Svg {...p}>
+    <path d="M7 4.5v15l12-7.5z" fill="currentColor" />
+  </Svg>
+)
 export const PlusIcon = (p) => (
   <Svg {...p}>
     <path d="M12 5v14M5 12h14" />
